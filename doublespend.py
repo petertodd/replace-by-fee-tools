@@ -161,6 +161,8 @@ if not args.dryrun:
 
 # Double-spend! Remove all but the change output
 tx.vout = tx.vout[0:1]
+change_txout = tx.vout[0]
+value_out = value_in
 change_txout.nValue = value_out
 
 # FIXME: need to modularize this code

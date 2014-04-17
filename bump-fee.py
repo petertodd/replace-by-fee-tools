@@ -101,7 +101,7 @@ logging.debug('Old size: %.3f KB, Old fees: %s, %s BTC/KB, Desired fees: %s BTC/
          str_money_value(old_fees_per_byte * 1000),
          str_money_value(desired_fees_per_byte * 1000)))
 
-unspent = sorted(rpc.listunspent(), key=lambda x: x['amount'])
+unspent = sorted(rpc.listunspent(1), key=lambda x: x['amount'])
 
 # Modify the transaction by either reducing the amount of change out, or adding
 # new inputs, until it meets the fees-per-byte that we want.
@@ -117,7 +117,8 @@ while (value_in-value_out) / len(tx.serialize()) < desired_fees_per_byte:
 
     logging.debug('Delta fee: %s' % str_money_value(delta_fee))
 
-    # If we simply subtract that from the change output, are we still above the dust threshold?
+    # If we simply subtract that from the change output are we still above the
+    # dust threshold?
     if change_txout.nValue - delta_fee > DUST:
         change_txout.nValue -= delta_fee
         value_out -= delta_fee
@@ -147,7 +148,7 @@ while (value_in-value_out) / len(tx.serialize()) < desired_fees_per_byte:
 
         tx.vin.append(new_txin)
 
-        # re-sign the tx so we can figure out how large the new inputs scriptSig will be.
+        # re-sign the tx so we can figure out how large the new input's scriptSig will be.
         r = rpc.signrawtransaction(tx)
         assert(r['complete'])
 

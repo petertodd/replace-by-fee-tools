@@ -300,7 +300,7 @@ class Proxy(RawProxy):
 
         This is for use with raw transactions, NOT normal use.
         """
-        r = self._call('getrawchangeaddress', account)
+        r = self._call('getrawchangeaddress')
         return CBitcoinAddress(r)
 
     def getrawtransaction(self, txid, verbose=False):
@@ -401,6 +401,13 @@ class Proxy(RawProxy):
         """Submit transaction to local node and network."""
         hextx = hexlify(tx.serialize())
         r = self._call('sendrawtransaction', hextx)
+        return lx(r)
+
+    def sendtoaddress(self, addr, amount):
+        """Sent amount to a given address"""
+        addr = str(addr)
+        amount = float(amount)/COIN
+        r = self._call('sendtoaddress', addr, amount)
         return lx(r)
 
     def signrawtransaction(self, tx, *args):

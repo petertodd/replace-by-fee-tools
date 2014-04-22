@@ -11,7 +11,7 @@ import bitcoin.rpc
 import logging
 import math
 
-from bitcoin.core import b2x, b2lx, lx, str_money_value, COIN, CTxIn
+from bitcoin.core import b2x, b2lx, lx, str_money_value, COIN, CTxIn, CTxOut
 from bitcoin.wallet import CBitcoinAddress
 
 DUST = int(0.0001 * COIN)

@@ -16,8 +16,6 @@ from bitcoin.core import b2x, b2lx, x, lx, str_money_value, COIN, CTransaction, 
 from bitcoin.core.script import CScript, OP_RETURN, OP_CHECKMULTISIG
 from bitcoin.wallet import CBitcoinAddress
 
-DUST = int(0.0001 * COIN)
-
 parser = argparse.ArgumentParser(
         description="Attempt to double-spend a payment",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -33,7 +31,7 @@ parser.add_argument('-d', action='store', type=int,
                     dest='delay',
                     help="Delay in seconds between payment and double-spend")
 parser.add_argument('--dust', action='store', type=float,
-                    default=0.00001,
+                    default=0.0001,
                     help="Dust amount")
 parser.add_argument('--fee1', action='store', type=float,
                     metavar='FEEPERKB',

@@ -95,6 +95,9 @@ value_out = sum([vout.nValue for vout in tx.vout])
 old_fees_per_byte = (value_in-value_out) / len(tx.serialize())
 desired_fees_per_byte = old_fees_per_byte * args.ratio
 
+# Old transaction might have had no fees at all, in which case use the minimum of 0.1mBTC/KB
+desired_fees_per_byte = max(desired_fees_per_byte, 0.0001*COIN / 1000)
+
 logging.debug('Old size: %.3f KB, Old fees: %s, %s BTC/KB, Desired fees: %s BTC/KB' % \
         (len(tx.serialize()) / 1000,
          str_money_value(value_in-value_out),

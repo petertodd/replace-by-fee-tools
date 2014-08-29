@@ -22,9 +22,9 @@ known_privkeys_by_scriptPubKey = {}
 def create_spend_to_fees_tx(outpoint, privkey):
     txin_scriptPubKey = CScript([OP_DUP, OP_HASH160, Hash160(privkey.pub), OP_EQUALVERIFY, OP_CHECKSIG])
 
-    txin = CTxIn(outpoint)
-    txout = CTxOut(0, CScript([OP_RETURN]))
-    tx = CTransaction([txin],[txout])
+    txin = CMutableTxIn(outpoint)
+    txout = CMutableTxOut(0, CScript([OP_RETURN]))
+    tx = CMutableTransaction([txin],[txout])
 
     sigflags = SIGHASH_NONE | SIGHASH_ANYONECANPAY
     sighash = SignatureHash(txin_scriptPubKey, tx, 0, sigflags)

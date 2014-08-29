@@ -11,7 +11,7 @@ import bitcoin.rpc
 import logging
 import math
 
-from bitcoin.core import b2x, b2lx, lx, str_money_value, COIN, CTxIn, CTxOut
+from bitcoin.core import b2x, b2lx, lx, str_money_value, COIN, CMutableTransaction, CMutableTxIn, CMutableTxOut
 from bitcoin.wallet import CBitcoinAddress
 
 DUST = int(0.0001 * COIN)
@@ -57,7 +57,7 @@ except IndexError as err:
     parser.exit('Invalid txid: Not in wallet.')
 
 txinfo = rpc.getrawtransaction(args.txid, True)
-tx = txinfo['tx']
+tx = CMutableTransaction.from_tx(txinfo['tx'])
 
 if 'confirmations' in txinfo and txinfo['confirmations'] > 0:
     parser.exit("Transaction already mined; %d confirmations." % txinfo['confirmations'])
@@ -79,7 +79,7 @@ if change_txout is None:
     #
     # Create a new txout for use as change.
     addr = rpc.getrawchangeaddress()
-    change_txout = CTxOut(0, addr.to_scriptPubKey())
+    change_txout = CMutableTxOut(0, addr.to_scriptPubKey())
     tx.vout.append(change_txout)
 
 
@@ -143,7 +143,7 @@ while (value_in-value_out) / len(tx.serialize()) < desired_fees_per_byte:
                 (b2lx(new_outpoint.hash), new_outpoint.n,
                  str_money_value(new_amount)))
 
-        new_txin = CTxIn(new_outpoint)
+        new_txin = CMutableTxIn(new_outpoint)
         value_in += new_amount
 
         change_txout.nValue += new_amount

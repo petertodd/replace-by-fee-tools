@@ -85,7 +85,7 @@ if args.op_return:
     tx.vout.append(op_ret_txout)
 
 if args.multisig:
-    multisig_txout = CTxOut(args.dust,
+    multisig_txout = CMutableTxOut(args.dust,
             CScript([1, x('0378d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71'),
                         b'\x00'*33,
                      2, OP_CHECKMULTISIG]))

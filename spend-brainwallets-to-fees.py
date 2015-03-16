@@ -19,6 +19,12 @@ from bitcoin.wallet import *
 
 known_privkeys_by_scriptPubKey = {}
 
+known_p2sh_redeemScripts = {CScript():CScript([1]),
+                            CScript([1]):CScript()}
+
+known_p2sh_scriptPubKeys = \
+        {redeemScript.to_p2sh_scriptPubKey():(redeemScript,scriptSig) for redeemScript, scriptSig in known_p2sh_redeemScripts.items()}
+
 def create_spend_to_fees_tx(outpoint, privkey):
     txin_scriptPubKey = CScript([OP_DUP, OP_HASH160, Hash160(privkey.pub), OP_EQUALVERIFY, OP_CHECKSIG])
 
@@ -36,15 +42,22 @@ def create_spend_to_fees_tx(outpoint, privkey):
 
     return tx
 
+def create_p2sh_spend_to_fees_tx(outpoint, scriptSig, redeemScript):
+    return CTransaction([CTxIn(outpoint, scriptSig + redeemScript)],
+                        [CTxOut(0, CScript([OP_RETURN]))])
+
 def scan_tx_for_spendable_outputs(tx, txid):
     for (n, txout) in enumerate(tx.vout):
-        try:
+        if txout.scriptPubKey in known_privkeys_by_scriptPubKey:
             privkey = known_privkeys_by_scriptPubKey[txout.scriptPubKey]
-        except KeyError:
-            continue
 
-        outpoint = COutPoint(txid, n)
-        yield create_spend_to_fees_tx(outpoint, privkey)
+            outpoint = COutPoint(txid, n)
+            yield create_spend_to_fees_tx(outpoint, privkey)
+
+        elif txout.scriptPubKey in known_p2sh_scriptPubKeys:
+            outpoint = COutPoint(txid, n)
+            redeemScript, scriptSig = known_p2sh_scriptPubKeys[txout.scriptPubKey]
+            yield create_p2sh_spend_to_fees_tx(outpoint, scriptSig, redeemScript)
 
 parser = argparse.ArgumentParser(description="Spend known secret-key outputs to fees. (e.g. brainwallets)")
 parser.add_argument('-v', action='store_true',

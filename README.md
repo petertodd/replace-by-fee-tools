@@ -2,8 +2,8 @@ Replace-by-Fee Tools
 ====================
 
 Tools to test out replace-by-fee functionality. You'll need a local node with
-the replace-by-fee patch. A version applied to Bitcoin Core v0.10.0rc4 is
-available at https://github.com/petertodd/bitcoin/tree/replace-by-fee-v0.10.0rc4
+the replace-by-fee patch. A version applied to Bitcoin Core v0.10.1 is
+available at https://github.com/petertodd/bitcoin/tree/replace-by-fee-v0.10.1
 
 Requirements: Python3 (python-bitcoinlib included in repo as subtree)
 

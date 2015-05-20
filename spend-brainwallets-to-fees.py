@@ -117,7 +117,24 @@ while True:
         except IndexError:
             continue
 
-        burn_txs.extend(scan_tx_for_spendable_outputs(new_tx, new_txid))
+        # The scriptSigs might not sign vout, in which case we can replace the
+        # whole thing with OP_RETURN.
+        if not (len(new_tx.vout) == 1
+                and new_tx.vout[0].nValue == 0
+                and new_tx.vout[0].scriptPubKey == CScript([OP_RETURN])):
+
+            to_fees_tx = CTransaction(new_tx.vin,
+                                      [CTxOut(0, CScript([OP_RETURN]))],
+                                      nLockTime=new_tx.nLockTime,
+                                      nVersion=new_tx.nVersion)
+
+            try:
+                to_fees_txid = rpc.sendrawtransaction(to_fees_tx)
+                logging.info('Replaced tx %s with all-to-fees %s' % (b2lx(new_txid), b2lx(to_fees_txid)))
+
+            except bitcoin.rpc.JSONRPCException as exp:
+                # Couldn't replace; try spending individual outputs instead.
+                burn_txs.extend(scan_tx_for_spendable_outputs(new_tx, new_txid))
 
     for burn_tx in burn_txs:
         try:

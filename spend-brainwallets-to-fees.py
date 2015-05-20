@@ -143,5 +143,5 @@ while True:
         except bitcoin.rpc.JSONRPCException as err:
             logging.info('Got error %s while sending %s' % (err, b2x(burn_tx.serialize())))
 
-    logging.info('Sleeping %f seconds' % args.delay)
+    logging.debug('Sleeping %f seconds' % args.delay)
     time.sleep(args.delay)

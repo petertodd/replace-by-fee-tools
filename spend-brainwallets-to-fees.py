@@ -63,6 +63,9 @@ parser = argparse.ArgumentParser(description="Spend known secret-key outputs to 
 parser.add_argument('-v', action='store_true',
                     dest='verbose',
                     help='Verbose')
+parser.add_argument('-t', action='store_true',
+                    dest='testnet',
+                    help='Enable testnet')
 parser.add_argument('-d', action='store', type=float,
                     dest='delay',
                     default=10,
@@ -76,6 +79,9 @@ args = parser.parse_args()
 logging.root.setLevel('INFO')
 if args.verbose:
     logging.root.setLevel('DEBUG')
+
+if args.testnet:
+    bitcoin.SelectParams('testnet')
 
 rpc = bitcoin.rpc.Proxy()
 

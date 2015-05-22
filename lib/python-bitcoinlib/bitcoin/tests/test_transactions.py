@@ -1,5 +1,13 @@
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2013-2014 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -49,6 +57,17 @@ class Test_COutPoint(unittest.TestCase):
           'COutPoint()')
         T( COutPoint(lx('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'), 0),
           "COutPoint(lx('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'), 0)")
+
+    def test_str(self):
+        def T(outpoint, expected):
+            actual = str(outpoint)
+            self.assertEqual(actual, expected)
+        T(COutPoint(),
+          '0000000000000000000000000000000000000000000000000000000000000000:4294967295')
+        T(COutPoint(lx('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'), 0),
+                       '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b:0')
+        T(COutPoint(lx('4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b'), 10),
+                       '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b:10')
 
 class Test_CMutableOutPoint(unittest.TestCase):
     def test_GetHash(self):

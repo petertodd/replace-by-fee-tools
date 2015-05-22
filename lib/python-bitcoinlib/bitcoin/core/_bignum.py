@@ -1,12 +1,17 @@
+# Copyright (C) 2012-2014 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
+# Bignum routines
 #
-# bignum.py
-#
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#
-
-"""Bignum routines"""
+# Internally used for script evaluation; not to be used externally.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -19,13 +24,13 @@ def bn_bytes(v, have_ext=False):
     ext = 0
     if have_ext:
         ext = 1
-    return ((v.bit_length()+7)//8) + ext
+    return ((v.bit_length() + 7) // 8) + ext
 
 def bn2bin(v):
     s = bytearray()
     i = bn_bytes(v)
     while i > 0:
-        s.append((v >> ((i-1) * 8)) & 0xff)
+        s.append((v >> ((i - 1) * 8)) & 0xff)
         i -= 1
     return s
 

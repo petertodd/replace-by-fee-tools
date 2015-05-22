@@ -1,10 +1,13 @@
-
+# Copyright (C) 2012-2015 The python-bitcoinlib developers
 #
-# script.py
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Scripts
 
@@ -12,21 +15,22 @@ Functionality to build scripts, as well as SignatureHash(). Script evaluation
 is in bitcoin.core.scripteval
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import sys
-bchr = chr
-bord = ord
+_bchr = chr
+_bord = ord
 if sys.version > '3':
-        long = int
-        bchr = lambda x: bytes([x])
-        bord = lambda x: x
+    long = int
+    _bchr = lambda x: bytes([x])
+    _bord = lambda x: x
 
+import array
 import copy
 import struct
 
 import bitcoin.core
-import bitcoin.core.bignum
+import bitcoin.core._bignum
 
 MAX_SCRIPT_SIZE = 10000
 MAX_SCRIPT_ELEMENT_SIZE = 520
@@ -43,9 +47,9 @@ class CScriptOp(int):
     def encode_op_pushdata(d):
         """Encode a PUSHDATA op, returning bytes"""
         if len(d) < 0x4c:
-            return b'' + bchr(len(d)) + d # OP_PUSHDATA
+            return b'' + _bchr(len(d)) + d # OP_PUSHDATA
         elif len(d) <= 0xff:
-            return b'\x4c' + bchr(len(d)) + d # OP_PUSHDATA1
+            return b'\x4c' + _bchr(len(d)) + d # OP_PUSHDATA1
         elif len(d) <= 0xffff:
             return b'\x4d' + struct.pack(b'<H', len(d)) + d # OP_PUSHDATA2
         elif len(d) <= 0xffffffff:
@@ -112,7 +116,7 @@ OP_PUSHDATA4 = CScriptOp(0x4e)
 OP_1NEGATE = CScriptOp(0x4f)
 OP_RESERVED = CScriptOp(0x50)
 OP_1 = CScriptOp(0x51)
-OP_TRUE=OP_1
+OP_TRUE = OP_1
 OP_2 = CScriptOp(0x52)
 OP_3 = CScriptOp(0x53)
 OP_4 = CScriptOp(0x54)
@@ -243,367 +247,249 @@ OP_PUBKEY = CScriptOp(0xfe)
 
 OP_INVALIDOPCODE = CScriptOp(0xff)
 
-VALID_OPCODES = {
-    OP_1NEGATE,
-    OP_RESERVED,
-    OP_1,
-    OP_2,
-    OP_3,
-    OP_4,
-    OP_5,
-    OP_6,
-    OP_7,
-    OP_8,
-    OP_9,
-    OP_10,
-    OP_11,
-    OP_12,
-    OP_13,
-    OP_14,
-    OP_15,
-    OP_16,
-
-    OP_NOP,
-    OP_VER,
-    OP_IF,
-    OP_NOTIF,
-    OP_VERIF,
-    OP_VERNOTIF,
-    OP_ELSE,
-    OP_ENDIF,
-    OP_VERIFY,
-    OP_RETURN,
-
-    OP_TOALTSTACK,
-    OP_FROMALTSTACK,
-    OP_2DROP,
-    OP_2DUP,
-    OP_3DUP,
-    OP_2OVER,
-    OP_2ROT,
-    OP_2SWAP,
-    OP_IFDUP,
-    OP_DEPTH,
-    OP_DROP,
-    OP_DUP,
-    OP_NIP,
-    OP_OVER,
-    OP_PICK,
-    OP_ROLL,
-    OP_ROT,
-    OP_SWAP,
-    OP_TUCK,
-
-    OP_CAT,
-    OP_SUBSTR,
-    OP_LEFT,
-    OP_RIGHT,
-    OP_SIZE,
-
-    OP_INVERT,
-    OP_AND,
-    OP_OR,
-    OP_XOR,
-    OP_EQUAL,
-    OP_EQUALVERIFY,
-    OP_RESERVED1,
-    OP_RESERVED2,
-
-    OP_1ADD,
-    OP_1SUB,
-    OP_2MUL,
-    OP_2DIV,
-    OP_NEGATE,
-    OP_ABS,
-    OP_NOT,
-    OP_0NOTEQUAL,
-
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    OP_DIV,
-    OP_MOD,
-    OP_LSHIFT,
-    OP_RSHIFT,
-
-    OP_BOOLAND,
-    OP_BOOLOR,
-    OP_NUMEQUAL,
-    OP_NUMEQUALVERIFY,
-    OP_NUMNOTEQUAL,
-    OP_LESSTHAN,
-    OP_GREATERTHAN,
-    OP_LESSTHANOREQUAL,
-    OP_GREATERTHANOREQUAL,
-    OP_MIN,
-    OP_MAX,
-
-    OP_WITHIN,
-
-    OP_RIPEMD160,
-    OP_SHA1,
-    OP_SHA256,
-    OP_HASH160,
-    OP_HASH256,
-    OP_CODESEPARATOR,
-    OP_CHECKSIG,
-    OP_CHECKSIGVERIFY,
-    OP_CHECKMULTISIG,
-    OP_CHECKMULTISIGVERIFY,
-
-    OP_NOP1,
-    OP_NOP2,
-    OP_NOP3,
-    OP_NOP4,
-    OP_NOP5,
-    OP_NOP6,
-    OP_NOP7,
-    OP_NOP8,
-    OP_NOP9,
-    OP_NOP10,
-
-    OP_SMALLINTEGER,
-    OP_PUBKEYS,
-    OP_PUBKEYHASH,
-    OP_PUBKEY,
-}
-
 OPCODE_NAMES.update({
-    OP_0 : 'OP_0',
-    OP_PUSHDATA1 : 'OP_PUSHDATA1',
-    OP_PUSHDATA2 : 'OP_PUSHDATA2',
-    OP_PUSHDATA4 : 'OP_PUSHDATA4',
-    OP_1NEGATE : 'OP_1NEGATE',
-    OP_RESERVED : 'OP_RESERVED',
-    OP_1 : 'OP_1',
-    OP_2 : 'OP_2',
-    OP_3 : 'OP_3',
-    OP_4 : 'OP_4',
-    OP_5 : 'OP_5',
-    OP_6 : 'OP_6',
-    OP_7 : 'OP_7',
-    OP_8 : 'OP_8',
-    OP_9 : 'OP_9',
-    OP_10 : 'OP_10',
-    OP_11 : 'OP_11',
-    OP_12 : 'OP_12',
-    OP_13 : 'OP_13',
-    OP_14 : 'OP_14',
-    OP_15 : 'OP_15',
-    OP_16 : 'OP_16',
-    OP_NOP : 'OP_NOP',
-    OP_VER : 'OP_VER',
-    OP_IF : 'OP_IF',
-    OP_NOTIF : 'OP_NOTIF',
-    OP_VERIF : 'OP_VERIF',
-    OP_VERNOTIF : 'OP_VERNOTIF',
-    OP_ELSE : 'OP_ELSE',
-    OP_ENDIF : 'OP_ENDIF',
-    OP_VERIFY : 'OP_VERIFY',
-    OP_RETURN : 'OP_RETURN',
-    OP_TOALTSTACK : 'OP_TOALTSTACK',
-    OP_FROMALTSTACK : 'OP_FROMALTSTACK',
-    OP_2DROP : 'OP_2DROP',
-    OP_2DUP : 'OP_2DUP',
-    OP_3DUP : 'OP_3DUP',
-    OP_2OVER : 'OP_2OVER',
-    OP_2ROT : 'OP_2ROT',
-    OP_2SWAP : 'OP_2SWAP',
-    OP_IFDUP : 'OP_IFDUP',
-    OP_DEPTH : 'OP_DEPTH',
-    OP_DROP : 'OP_DROP',
-    OP_DUP : 'OP_DUP',
-    OP_NIP : 'OP_NIP',
-    OP_OVER : 'OP_OVER',
-    OP_PICK : 'OP_PICK',
-    OP_ROLL : 'OP_ROLL',
-    OP_ROT : 'OP_ROT',
-    OP_SWAP : 'OP_SWAP',
-    OP_TUCK : 'OP_TUCK',
-    OP_CAT : 'OP_CAT',
-    OP_SUBSTR : 'OP_SUBSTR',
-    OP_LEFT : 'OP_LEFT',
-    OP_RIGHT : 'OP_RIGHT',
-    OP_SIZE : 'OP_SIZE',
-    OP_INVERT : 'OP_INVERT',
-    OP_AND : 'OP_AND',
-    OP_OR : 'OP_OR',
-    OP_XOR : 'OP_XOR',
-    OP_EQUAL : 'OP_EQUAL',
-    OP_EQUALVERIFY : 'OP_EQUALVERIFY',
-    OP_RESERVED1 : 'OP_RESERVED1',
-    OP_RESERVED2 : 'OP_RESERVED2',
-    OP_1ADD : 'OP_1ADD',
-    OP_1SUB : 'OP_1SUB',
-    OP_2MUL : 'OP_2MUL',
-    OP_2DIV : 'OP_2DIV',
-    OP_NEGATE : 'OP_NEGATE',
-    OP_ABS : 'OP_ABS',
-    OP_NOT : 'OP_NOT',
-    OP_0NOTEQUAL : 'OP_0NOTEQUAL',
-    OP_ADD : 'OP_ADD',
-    OP_SUB : 'OP_SUB',
-    OP_MUL : 'OP_MUL',
-    OP_DIV : 'OP_DIV',
-    OP_MOD : 'OP_MOD',
-    OP_LSHIFT : 'OP_LSHIFT',
-    OP_RSHIFT : 'OP_RSHIFT',
-    OP_BOOLAND : 'OP_BOOLAND',
-    OP_BOOLOR : 'OP_BOOLOR',
-    OP_NUMEQUAL : 'OP_NUMEQUAL',
-    OP_NUMEQUALVERIFY : 'OP_NUMEQUALVERIFY',
-    OP_NUMNOTEQUAL : 'OP_NUMNOTEQUAL',
-    OP_LESSTHAN : 'OP_LESSTHAN',
-    OP_GREATERTHAN : 'OP_GREATERTHAN',
-    OP_LESSTHANOREQUAL : 'OP_LESSTHANOREQUAL',
-    OP_GREATERTHANOREQUAL : 'OP_GREATERTHANOREQUAL',
-    OP_MIN : 'OP_MIN',
-    OP_MAX : 'OP_MAX',
-    OP_WITHIN : 'OP_WITHIN',
-    OP_RIPEMD160 : 'OP_RIPEMD160',
-    OP_SHA1 : 'OP_SHA1',
-    OP_SHA256 : 'OP_SHA256',
-    OP_HASH160 : 'OP_HASH160',
-    OP_HASH256 : 'OP_HASH256',
-    OP_CODESEPARATOR : 'OP_CODESEPARATOR',
-    OP_CHECKSIG : 'OP_CHECKSIG',
-    OP_CHECKSIGVERIFY : 'OP_CHECKSIGVERIFY',
-    OP_CHECKMULTISIG : 'OP_CHECKMULTISIG',
-    OP_CHECKMULTISIGVERIFY : 'OP_CHECKMULTISIGVERIFY',
-    OP_NOP1 : 'OP_NOP1',
-    OP_NOP2 : 'OP_NOP2',
-    OP_NOP3 : 'OP_NOP3',
-    OP_NOP4 : 'OP_NOP4',
-    OP_NOP5 : 'OP_NOP5',
-    OP_NOP6 : 'OP_NOP6',
-    OP_NOP7 : 'OP_NOP7',
-    OP_NOP8 : 'OP_NOP8',
-    OP_NOP9 : 'OP_NOP9',
-    OP_NOP10 : 'OP_NOP10',
-    OP_SMALLINTEGER : 'OP_SMALLINTEGER',
-    OP_PUBKEYS : 'OP_PUBKEYS',
-    OP_PUBKEYHASH : 'OP_PUBKEYHASH',
-    OP_PUBKEY : 'OP_PUBKEY',
-    OP_INVALIDOPCODE : 'OP_INVALIDOPCODE',
+    OP_0: 'OP_0',
+    OP_PUSHDATA1: 'OP_PUSHDATA1',
+    OP_PUSHDATA2: 'OP_PUSHDATA2',
+    OP_PUSHDATA4: 'OP_PUSHDATA4',
+    OP_1NEGATE: 'OP_1NEGATE',
+    OP_RESERVED: 'OP_RESERVED',
+    OP_1: 'OP_1',
+    OP_2: 'OP_2',
+    OP_3: 'OP_3',
+    OP_4: 'OP_4',
+    OP_5: 'OP_5',
+    OP_6: 'OP_6',
+    OP_7: 'OP_7',
+    OP_8: 'OP_8',
+    OP_9: 'OP_9',
+    OP_10: 'OP_10',
+    OP_11: 'OP_11',
+    OP_12: 'OP_12',
+    OP_13: 'OP_13',
+    OP_14: 'OP_14',
+    OP_15: 'OP_15',
+    OP_16: 'OP_16',
+    OP_NOP: 'OP_NOP',
+    OP_VER: 'OP_VER',
+    OP_IF: 'OP_IF',
+    OP_NOTIF: 'OP_NOTIF',
+    OP_VERIF: 'OP_VERIF',
+    OP_VERNOTIF: 'OP_VERNOTIF',
+    OP_ELSE: 'OP_ELSE',
+    OP_ENDIF: 'OP_ENDIF',
+    OP_VERIFY: 'OP_VERIFY',
+    OP_RETURN: 'OP_RETURN',
+    OP_TOALTSTACK: 'OP_TOALTSTACK',
+    OP_FROMALTSTACK: 'OP_FROMALTSTACK',
+    OP_2DROP: 'OP_2DROP',
+    OP_2DUP: 'OP_2DUP',
+    OP_3DUP: 'OP_3DUP',
+    OP_2OVER: 'OP_2OVER',
+    OP_2ROT: 'OP_2ROT',
+    OP_2SWAP: 'OP_2SWAP',
+    OP_IFDUP: 'OP_IFDUP',
+    OP_DEPTH: 'OP_DEPTH',
+    OP_DROP: 'OP_DROP',
+    OP_DUP: 'OP_DUP',
+    OP_NIP: 'OP_NIP',
+    OP_OVER: 'OP_OVER',
+    OP_PICK: 'OP_PICK',
+    OP_ROLL: 'OP_ROLL',
+    OP_ROT: 'OP_ROT',
+    OP_SWAP: 'OP_SWAP',
+    OP_TUCK: 'OP_TUCK',
+    OP_CAT: 'OP_CAT',
+    OP_SUBSTR: 'OP_SUBSTR',
+    OP_LEFT: 'OP_LEFT',
+    OP_RIGHT: 'OP_RIGHT',
+    OP_SIZE: 'OP_SIZE',
+    OP_INVERT: 'OP_INVERT',
+    OP_AND: 'OP_AND',
+    OP_OR: 'OP_OR',
+    OP_XOR: 'OP_XOR',
+    OP_EQUAL: 'OP_EQUAL',
+    OP_EQUALVERIFY: 'OP_EQUALVERIFY',
+    OP_RESERVED1: 'OP_RESERVED1',
+    OP_RESERVED2: 'OP_RESERVED2',
+    OP_1ADD: 'OP_1ADD',
+    OP_1SUB: 'OP_1SUB',
+    OP_2MUL: 'OP_2MUL',
+    OP_2DIV: 'OP_2DIV',
+    OP_NEGATE: 'OP_NEGATE',
+    OP_ABS: 'OP_ABS',
+    OP_NOT: 'OP_NOT',
+    OP_0NOTEQUAL: 'OP_0NOTEQUAL',
+    OP_ADD: 'OP_ADD',
+    OP_SUB: 'OP_SUB',
+    OP_MUL: 'OP_MUL',
+    OP_DIV: 'OP_DIV',
+    OP_MOD: 'OP_MOD',
+    OP_LSHIFT: 'OP_LSHIFT',
+    OP_RSHIFT: 'OP_RSHIFT',
+    OP_BOOLAND: 'OP_BOOLAND',
+    OP_BOOLOR: 'OP_BOOLOR',
+    OP_NUMEQUAL: 'OP_NUMEQUAL',
+    OP_NUMEQUALVERIFY: 'OP_NUMEQUALVERIFY',
+    OP_NUMNOTEQUAL: 'OP_NUMNOTEQUAL',
+    OP_LESSTHAN: 'OP_LESSTHAN',
+    OP_GREATERTHAN: 'OP_GREATERTHAN',
+    OP_LESSTHANOREQUAL: 'OP_LESSTHANOREQUAL',
+    OP_GREATERTHANOREQUAL: 'OP_GREATERTHANOREQUAL',
+    OP_MIN: 'OP_MIN',
+    OP_MAX: 'OP_MAX',
+    OP_WITHIN: 'OP_WITHIN',
+    OP_RIPEMD160: 'OP_RIPEMD160',
+    OP_SHA1: 'OP_SHA1',
+    OP_SHA256: 'OP_SHA256',
+    OP_HASH160: 'OP_HASH160',
+    OP_HASH256: 'OP_HASH256',
+    OP_CODESEPARATOR: 'OP_CODESEPARATOR',
+    OP_CHECKSIG: 'OP_CHECKSIG',
+    OP_CHECKSIGVERIFY: 'OP_CHECKSIGVERIFY',
+    OP_CHECKMULTISIG: 'OP_CHECKMULTISIG',
+    OP_CHECKMULTISIGVERIFY: 'OP_CHECKMULTISIGVERIFY',
+    OP_NOP1: 'OP_NOP1',
+    OP_NOP2: 'OP_NOP2',
+    OP_NOP3: 'OP_NOP3',
+    OP_NOP4: 'OP_NOP4',
+    OP_NOP5: 'OP_NOP5',
+    OP_NOP6: 'OP_NOP6',
+    OP_NOP7: 'OP_NOP7',
+    OP_NOP8: 'OP_NOP8',
+    OP_NOP9: 'OP_NOP9',
+    OP_NOP10: 'OP_NOP10',
+    OP_SMALLINTEGER: 'OP_SMALLINTEGER',
+    OP_PUBKEYS: 'OP_PUBKEYS',
+    OP_PUBKEYHASH: 'OP_PUBKEYHASH',
+    OP_PUBKEY: 'OP_PUBKEY',
+    OP_INVALIDOPCODE: 'OP_INVALIDOPCODE',
 })
 
 OPCODES_BY_NAME = {
-    'OP_0' : OP_0,
-    'OP_PUSHDATA1' : OP_PUSHDATA1,
-    'OP_PUSHDATA2' : OP_PUSHDATA2,
-    'OP_PUSHDATA4' : OP_PUSHDATA4,
-    'OP_1NEGATE' : OP_1NEGATE,
-    'OP_RESERVED' : OP_RESERVED,
-    'OP_1' : OP_1,
-    'OP_2' : OP_2,
-    'OP_3' : OP_3,
-    'OP_4' : OP_4,
-    'OP_5' : OP_5,
-    'OP_6' : OP_6,
-    'OP_7' : OP_7,
-    'OP_8' : OP_8,
-    'OP_9' : OP_9,
-    'OP_10' : OP_10,
-    'OP_11' : OP_11,
-    'OP_12' : OP_12,
-    'OP_13' : OP_13,
-    'OP_14' : OP_14,
-    'OP_15' : OP_15,
-    'OP_16' : OP_16,
-    'OP_NOP' : OP_NOP,
-    'OP_VER' : OP_VER,
-    'OP_IF' : OP_IF,
-    'OP_NOTIF' : OP_NOTIF,
-    'OP_VERIF' : OP_VERIF,
-    'OP_VERNOTIF' : OP_VERNOTIF,
-    'OP_ELSE' : OP_ELSE,
-    'OP_ENDIF' : OP_ENDIF,
-    'OP_VERIFY' : OP_VERIFY,
-    'OP_RETURN' : OP_RETURN,
-    'OP_TOALTSTACK' : OP_TOALTSTACK,
-    'OP_FROMALTSTACK' : OP_FROMALTSTACK,
-    'OP_2DROP' : OP_2DROP,
-    'OP_2DUP' : OP_2DUP,
-    'OP_3DUP' : OP_3DUP,
-    'OP_2OVER' : OP_2OVER,
-    'OP_2ROT' : OP_2ROT,
-    'OP_2SWAP' : OP_2SWAP,
-    'OP_IFDUP' : OP_IFDUP,
-    'OP_DEPTH' : OP_DEPTH,
-    'OP_DROP' : OP_DROP,
-    'OP_DUP' : OP_DUP,
-    'OP_NIP' : OP_NIP,
-    'OP_OVER' : OP_OVER,
-    'OP_PICK' : OP_PICK,
-    'OP_ROLL' : OP_ROLL,
-    'OP_ROT' : OP_ROT,
-    'OP_SWAP' : OP_SWAP,
-    'OP_TUCK' : OP_TUCK,
-    'OP_CAT' : OP_CAT,
-    'OP_SUBSTR' : OP_SUBSTR,
-    'OP_LEFT' : OP_LEFT,
-    'OP_RIGHT' : OP_RIGHT,
-    'OP_SIZE' : OP_SIZE,
-    'OP_INVERT' : OP_INVERT,
-    'OP_AND' : OP_AND,
-    'OP_OR' : OP_OR,
-    'OP_XOR' : OP_XOR,
-    'OP_EQUAL' : OP_EQUAL,
-    'OP_EQUALVERIFY' : OP_EQUALVERIFY,
-    'OP_RESERVED1' : OP_RESERVED1,
-    'OP_RESERVED2' : OP_RESERVED2,
-    'OP_1ADD' : OP_1ADD,
-    'OP_1SUB' : OP_1SUB,
-    'OP_2MUL' : OP_2MUL,
-    'OP_2DIV' : OP_2DIV,
-    'OP_NEGATE' : OP_NEGATE,
-    'OP_ABS' : OP_ABS,
-    'OP_NOT' : OP_NOT,
-    'OP_0NOTEQUAL' : OP_0NOTEQUAL,
-    'OP_ADD' : OP_ADD,
-    'OP_SUB' : OP_SUB,
-    'OP_MUL' : OP_MUL,
-    'OP_DIV' : OP_DIV,
-    'OP_MOD' : OP_MOD,
-    'OP_LSHIFT' : OP_LSHIFT,
-    'OP_RSHIFT' : OP_RSHIFT,
-    'OP_BOOLAND' : OP_BOOLAND,
-    'OP_BOOLOR' : OP_BOOLOR,
-    'OP_NUMEQUAL' : OP_NUMEQUAL,
-    'OP_NUMEQUALVERIFY' : OP_NUMEQUALVERIFY,
-    'OP_NUMNOTEQUAL' : OP_NUMNOTEQUAL,
-    'OP_LESSTHAN' : OP_LESSTHAN,
-    'OP_GREATERTHAN' : OP_GREATERTHAN,
-    'OP_LESSTHANOREQUAL' : OP_LESSTHANOREQUAL,
-    'OP_GREATERTHANOREQUAL' : OP_GREATERTHANOREQUAL,
-    'OP_MIN' : OP_MIN,
-    'OP_MAX' : OP_MAX,
-    'OP_WITHIN' : OP_WITHIN,
-    'OP_RIPEMD160' : OP_RIPEMD160,
-    'OP_SHA1' : OP_SHA1,
-    'OP_SHA256' : OP_SHA256,
-    'OP_HASH160' : OP_HASH160,
-    'OP_HASH256' : OP_HASH256,
-    'OP_CODESEPARATOR' : OP_CODESEPARATOR,
-    'OP_CHECKSIG' : OP_CHECKSIG,
-    'OP_CHECKSIGVERIFY' : OP_CHECKSIGVERIFY,
-    'OP_CHECKMULTISIG' : OP_CHECKMULTISIG,
-    'OP_CHECKMULTISIGVERIFY' : OP_CHECKMULTISIGVERIFY,
-    'OP_NOP1' : OP_NOP1,
-    'OP_NOP2' : OP_NOP2,
-    'OP_NOP3' : OP_NOP3,
-    'OP_NOP4' : OP_NOP4,
-    'OP_NOP5' : OP_NOP5,
-    'OP_NOP6' : OP_NOP6,
-    'OP_NOP7' : OP_NOP7,
-    'OP_NOP8' : OP_NOP8,
-    'OP_NOP9' : OP_NOP9,
-    'OP_NOP10' : OP_NOP10,
-    'OP_SMALLINTEGER' : OP_SMALLINTEGER,
-    'OP_PUBKEYS' : OP_PUBKEYS,
-    'OP_PUBKEYHASH' : OP_PUBKEYHASH,
-    'OP_PUBKEY' : OP_PUBKEY,
+    'OP_0': OP_0,
+    'OP_PUSHDATA1': OP_PUSHDATA1,
+    'OP_PUSHDATA2': OP_PUSHDATA2,
+    'OP_PUSHDATA4': OP_PUSHDATA4,
+    'OP_1NEGATE': OP_1NEGATE,
+    'OP_RESERVED': OP_RESERVED,
+    'OP_1': OP_1,
+    'OP_2': OP_2,
+    'OP_3': OP_3,
+    'OP_4': OP_4,
+    'OP_5': OP_5,
+    'OP_6': OP_6,
+    'OP_7': OP_7,
+    'OP_8': OP_8,
+    'OP_9': OP_9,
+    'OP_10': OP_10,
+    'OP_11': OP_11,
+    'OP_12': OP_12,
+    'OP_13': OP_13,
+    'OP_14': OP_14,
+    'OP_15': OP_15,
+    'OP_16': OP_16,
+    'OP_NOP': OP_NOP,
+    'OP_VER': OP_VER,
+    'OP_IF': OP_IF,
+    'OP_NOTIF': OP_NOTIF,
+    'OP_VERIF': OP_VERIF,
+    'OP_VERNOTIF': OP_VERNOTIF,
+    'OP_ELSE': OP_ELSE,
+    'OP_ENDIF': OP_ENDIF,
+    'OP_VERIFY': OP_VERIFY,
+    'OP_RETURN': OP_RETURN,
+    'OP_TOALTSTACK': OP_TOALTSTACK,
+    'OP_FROMALTSTACK': OP_FROMALTSTACK,
+    'OP_2DROP': OP_2DROP,
+    'OP_2DUP': OP_2DUP,
+    'OP_3DUP': OP_3DUP,
+    'OP_2OVER': OP_2OVER,
+    'OP_2ROT': OP_2ROT,
+    'OP_2SWAP': OP_2SWAP,
+    'OP_IFDUP': OP_IFDUP,
+    'OP_DEPTH': OP_DEPTH,
+    'OP_DROP': OP_DROP,
+    'OP_DUP': OP_DUP,
+    'OP_NIP': OP_NIP,
+    'OP_OVER': OP_OVER,
+    'OP_PICK': OP_PICK,
+    'OP_ROLL': OP_ROLL,
+    'OP_ROT': OP_ROT,
+    'OP_SWAP': OP_SWAP,
+    'OP_TUCK': OP_TUCK,
+    'OP_CAT': OP_CAT,
+    'OP_SUBSTR': OP_SUBSTR,
+    'OP_LEFT': OP_LEFT,
+    'OP_RIGHT': OP_RIGHT,
+    'OP_SIZE': OP_SIZE,
+    'OP_INVERT': OP_INVERT,
+    'OP_AND': OP_AND,
+    'OP_OR': OP_OR,
+    'OP_XOR': OP_XOR,
+    'OP_EQUAL': OP_EQUAL,
+    'OP_EQUALVERIFY': OP_EQUALVERIFY,
+    'OP_RESERVED1': OP_RESERVED1,
+    'OP_RESERVED2': OP_RESERVED2,
+    'OP_1ADD': OP_1ADD,
+    'OP_1SUB': OP_1SUB,
+    'OP_2MUL': OP_2MUL,
+    'OP_2DIV': OP_2DIV,
+    'OP_NEGATE': OP_NEGATE,
+    'OP_ABS': OP_ABS,
+    'OP_NOT': OP_NOT,
+    'OP_0NOTEQUAL': OP_0NOTEQUAL,
+    'OP_ADD': OP_ADD,
+    'OP_SUB': OP_SUB,
+    'OP_MUL': OP_MUL,
+    'OP_DIV': OP_DIV,
+    'OP_MOD': OP_MOD,
+    'OP_LSHIFT': OP_LSHIFT,
+    'OP_RSHIFT': OP_RSHIFT,
+    'OP_BOOLAND': OP_BOOLAND,
+    'OP_BOOLOR': OP_BOOLOR,
+    'OP_NUMEQUAL': OP_NUMEQUAL,
+    'OP_NUMEQUALVERIFY': OP_NUMEQUALVERIFY,
+    'OP_NUMNOTEQUAL': OP_NUMNOTEQUAL,
+    'OP_LESSTHAN': OP_LESSTHAN,
+    'OP_GREATERTHAN': OP_GREATERTHAN,
+    'OP_LESSTHANOREQUAL': OP_LESSTHANOREQUAL,
+    'OP_GREATERTHANOREQUAL': OP_GREATERTHANOREQUAL,
+    'OP_MIN': OP_MIN,
+    'OP_MAX': OP_MAX,
+    'OP_WITHIN': OP_WITHIN,
+    'OP_RIPEMD160': OP_RIPEMD160,
+    'OP_SHA1': OP_SHA1,
+    'OP_SHA256': OP_SHA256,
+    'OP_HASH160': OP_HASH160,
+    'OP_HASH256': OP_HASH256,
+    'OP_CODESEPARATOR': OP_CODESEPARATOR,
+    'OP_CHECKSIG': OP_CHECKSIG,
+    'OP_CHECKSIGVERIFY': OP_CHECKSIGVERIFY,
+    'OP_CHECKMULTISIG': OP_CHECKMULTISIG,
+    'OP_CHECKMULTISIGVERIFY': OP_CHECKMULTISIGVERIFY,
+    'OP_NOP1': OP_NOP1,
+    'OP_NOP2': OP_NOP2,
+    'OP_NOP3': OP_NOP3,
+    'OP_NOP4': OP_NOP4,
+    'OP_NOP5': OP_NOP5,
+    'OP_NOP6': OP_NOP6,
+    'OP_NOP7': OP_NOP7,
+    'OP_NOP8': OP_NOP8,
+    'OP_NOP9': OP_NOP9,
+    'OP_NOP10': OP_NOP10,
+    'OP_SMALLINTEGER': OP_SMALLINTEGER,
+    'OP_PUBKEYS': OP_PUBKEYS,
+    'OP_PUBKEYHASH': OP_PUBKEYHASH,
+    'OP_PUBKEY': OP_PUBKEY,
 }
+
+# Invalid even when occuring in an unexecuted OP_IF branch due to either being
+# disabled, or never having been implemented.
+DISABLED_OPCODES = frozenset((OP_VERIF, OP_VERNOTIF,
+                              OP_CAT, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_INVERT, OP_AND,
+                              OP_OR, OP_XOR, OP_2MUL, OP_2DIV, OP_MUL, OP_DIV, OP_MOD,
+                              OP_LSHIFT, OP_RSHIFT))
 
 class CScriptInvalidError(Exception):
     """Base class for CScript exceptions"""
@@ -629,14 +515,14 @@ class CScript(bytes):
     def __coerce_instance(cls, other):
         # Coerce other into bytes
         if isinstance(other, CScriptOp):
-            other = bchr(other)
+            other = _bchr(other)
         elif isinstance(other, (int, long)):
             if 0 <= other <= 16:
-                other = bytes(bchr(CScriptOp.encode_op_n(other)))
+                other = bytes(_bchr(CScriptOp.encode_op_n(other)))
             elif other == -1:
-                other = bytes(bchr(OP_1NEGATE))
+                other = bytes(_bchr(OP_1NEGATE))
             else:
-                other = CScriptOp.encode_op_pushdata(bitcoin.core.bignum.bn2vch(other))
+                other = CScriptOp.encode_op_pushdata(bitcoin.core._bignum.bn2vch(other))
         elif isinstance(other, (bytes, bytearray)):
             other = CScriptOp.encode_op_pushdata(other)
         return other
@@ -677,7 +563,7 @@ class CScript(bytes):
         i = 0
         while i < len(self):
             sop_idx = i
-            opcode = bord(self[i])
+            opcode = _bord(self[i])
             i += 1
 
             if opcode > OP_PUSHDATA4:
@@ -693,21 +579,21 @@ class CScript(bytes):
                     pushdata_type = 'PUSHDATA1'
                     if i >= len(self):
                         raise CScriptInvalidError('PUSHDATA1: missing data length')
-                    datasize = bord(self[i])
+                    datasize = _bord(self[i])
                     i += 1
 
                 elif opcode == OP_PUSHDATA2:
                     pushdata_type = 'PUSHDATA2'
                     if i + 1 >= len(self):
                         raise CScriptInvalidError('PUSHDATA2: missing data length')
-                    datasize = bord(self[i]) + (bord(self[i+1]) << 8)
+                    datasize = _bord(self[i]) + (_bord(self[i+1]) << 8)
                     i += 2
 
                 elif opcode == OP_PUSHDATA4:
                     pushdata_type = 'PUSHDATA4'
                     if i + 3 >= len(self):
                         raise CScriptInvalidError('PUSHDATA4: missing data length')
-                    datasize = bord(self[i]) + (bord(self[i+1]) << 8) + (bord(self[i+2]) << 16) + (bord(self[i+3]) << 24)
+                    datasize = _bord(self[i]) + (_bord(self[i+1]) << 8) + (_bord(self[i+2]) << 16) + (_bord(self[i+3]) << 24)
                     i += 4
 
                 else:
@@ -779,9 +665,9 @@ class CScript(bytes):
         Note that this test is consensus-critical.
         """
         return (len(self) == 23 and
-                bord(self[0]) == OP_HASH160 and
-                bord(self[1]) == 0x14 and
-                bord(self[22]) == OP_EQUAL)
+                _bord(self[0]) == OP_HASH160 and
+                _bord(self[1]) == 0x14 and
+                _bord(self[22]) == OP_EQUAL)
 
     def is_push_only(self):
         """Test if the script only contains pushdata ops
@@ -797,14 +683,44 @@ class CScript(bytes):
                 if op > OP_16:
                     return False
 
-        except CScriptTruncatedPushDataError: # Invalid pushdata
+        except CScriptInvalidError:
+            return False
+        return True
+
+    def has_canonical_pushes(self):
+        """Test if script only uses canonical pushes
+
+        Not yet consensus critical; may be in the future.
+        """
+        try:
+            for (op, data, idx) in self.raw_iter():
+                if op > OP_16:
+                    continue
+
+                elif op < OP_PUSHDATA1 and op > OP_0 and len(data) == 1 and _bord(data[0]) <= 16:
+                    # Could have used an OP_n code, rather than a 1-byte push.
+                    return False
+
+                elif op == OP_PUSHDATA1 and len(data) < OP_PUSHDATA1:
+                    # Could have used a normal n-byte push, rather than OP_PUSHDATA1.
+                    return False
+
+                elif op == OP_PUSHDATA2 and len(data) <= 0xFF:
+                    # Could have used a OP_PUSHDATA1.
+                    return False
+
+                elif op == OP_PUSHDATA4 and len(data) <= 0xFFFF:
+                    # Could have used a OP_PUSHDATA2.
+                    return False
+
+        except CScriptInvalidError: # Invalid pushdata
             return False
         return True
 
     def is_unspendable(self):
         """Test if the script is provably unspendable"""
         return (len(self) > 0 and
-                bord(self[0]) == OP_RETURN)
+                _bord(self[0]) == OP_RETURN)
 
     def is_valid(self):
         """Return True if the script is valid, False otherwise
@@ -882,6 +798,57 @@ def FindAndDelete(script, sig):
         r += script[last_sop_idx:]
     return CScript(r)
 
+def IsLowDERSignature(sig):
+    """
+    Loosely correlates with IsLowDERSignature() from script/interpreter.cpp
+    Verifies that the S value in a DER signature is the lowest possible value.
+    Used by BIP62 malleability fixes.
+    """
+    length_r = sig[3]
+    if isinstance(length_r, str):
+        length_r = int(struct.unpack('B', length_r)[0])
+    length_s = sig[5 + length_r]
+    if isinstance(length_s, str):
+        length_s = int(struct.unpack('B', length_s)[0])
+    s_val = list(struct.unpack(str(length_s) + 'B', sig[6 + length_r:6 + length_r + length_s]))
+
+    # If the S value is above the order of the curve divided by two, its
+    # complement modulo the order could have been used instead, which is
+    # one byte shorter when encoded correctly.
+    max_mod_half_order = [
+      0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+      0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+      0x5d,0x57,0x6e,0x73,0x57,0xa4,0x50,0x1d,
+      0xdf,0xe9,0x2f,0x46,0x68,0x1b,0x20,0xa0]
+
+    return CompareBigEndian(s_val, [0]) > 0 and \
+      CompareBigEndian(s_val, max_mod_half_order) <= 0
+
+def CompareBigEndian(c1, c2):
+    """
+    Loosely matches CompareBigEndian() from eccryptoverify.cpp
+    Compares two arrays of bytes, and returns a negative value if the first is
+    less than the second, 0 if they're equal, and a positive value if the
+    first is greater than the second.
+    """
+    c1 = list(c1)
+    c2 = list(c2)
+
+    # Adjust starting positions until remaining lengths of the two arrays match
+    while len(c1) > len(c2):
+        if c1.pop(0) > 0:
+            return 1
+    while len(c2) > len(c1):
+        if c2.pop(0) > 0:
+            return -1
+
+    while len(c1) > 0:
+        diff = c1.pop(0) - c2.pop(0)
+        if diff != 0:
+            return diff
+
+    return 0
+
 
 def RawSignatureHash(script, txTo, inIdx, hashtype):
     """Consensus-correct SignatureHash
@@ -948,3 +915,150 @@ def SignatureHash(script, txTo, inIdx, hashtype):
     if err is not None:
         raise ValueError(err)
     return h
+
+
+__all__ = (
+        'MAX_SCRIPT_SIZE',
+        'MAX_SCRIPT_ELEMENT_SIZE',
+        'MAX_SCRIPT_OPCODES',
+        'OPCODE_NAMES',
+        'CScriptOp',
+
+        # every opcode
+        'OP_0',
+        'OP_FALSE',
+        'OP_PUSHDATA1',
+        'OP_PUSHDATA2',
+        'OP_PUSHDATA4',
+        'OP_1NEGATE',
+        'OP_RESERVED',
+        'OP_1',
+        'OP_TRUE',
+        'OP_2',
+        'OP_3',
+        'OP_4',
+        'OP_5',
+        'OP_6',
+        'OP_7',
+        'OP_8',
+        'OP_9',
+        'OP_10',
+        'OP_11',
+        'OP_12',
+        'OP_13',
+        'OP_14',
+        'OP_15',
+        'OP_16',
+        'OP_NOP',
+        'OP_VER',
+        'OP_IF',
+        'OP_NOTIF',
+        'OP_VERIF',
+        'OP_VERNOTIF',
+        'OP_ELSE',
+        'OP_ENDIF',
+        'OP_VERIFY',
+        'OP_RETURN',
+        'OP_TOALTSTACK',
+        'OP_FROMALTSTACK',
+        'OP_2DROP',
+        'OP_2DUP',
+        'OP_3DUP',
+        'OP_2OVER',
+        'OP_2ROT',
+        'OP_2SWAP',
+        'OP_IFDUP',
+        'OP_DEPTH',
+        'OP_DROP',
+        'OP_DUP',
+        'OP_NIP',
+        'OP_OVER',
+        'OP_PICK',
+        'OP_ROLL',
+        'OP_ROT',
+        'OP_SWAP',
+        'OP_TUCK',
+        'OP_CAT',
+        'OP_SUBSTR',
+        'OP_LEFT',
+        'OP_RIGHT',
+        'OP_SIZE',
+        'OP_INVERT',
+        'OP_AND',
+        'OP_OR',
+        'OP_XOR',
+        'OP_EQUAL',
+        'OP_EQUALVERIFY',
+        'OP_RESERVED1',
+        'OP_RESERVED2',
+        'OP_1ADD',
+        'OP_1SUB',
+        'OP_2MUL',
+        'OP_2DIV',
+        'OP_NEGATE',
+        'OP_ABS',
+        'OP_NOT',
+        'OP_0NOTEQUAL',
+        'OP_ADD',
+        'OP_SUB',
+        'OP_MUL',
+        'OP_DIV',
+        'OP_MOD',
+        'OP_LSHIFT',
+        'OP_RSHIFT',
+        'OP_BOOLAND',
+        'OP_BOOLOR',
+        'OP_NUMEQUAL',
+        'OP_NUMEQUALVERIFY',
+        'OP_NUMNOTEQUAL',
+        'OP_LESSTHAN',
+        'OP_GREATERTHAN',
+        'OP_LESSTHANOREQUAL',
+        'OP_GREATERTHANOREQUAL',
+        'OP_MIN',
+        'OP_MAX',
+        'OP_WITHIN',
+        'OP_RIPEMD160',
+        'OP_SHA1',
+        'OP_SHA256',
+        'OP_HASH160',
+        'OP_HASH256',
+        'OP_CODESEPARATOR',
+        'OP_CHECKSIG',
+        'OP_CHECKSIGVERIFY',
+        'OP_CHECKMULTISIG',
+        'OP_CHECKMULTISIGVERIFY',
+        'OP_NOP1',
+        'OP_NOP2',
+        'OP_NOP3',
+        'OP_NOP4',
+        'OP_NOP5',
+        'OP_NOP6',
+        'OP_NOP7',
+        'OP_NOP8',
+        'OP_NOP9',
+        'OP_NOP10',
+        'OP_SMALLINTEGER',
+        'OP_PUBKEYS',
+        'OP_PUBKEYHASH',
+        'OP_PUBKEY',
+        'OP_INVALIDOPCODE',
+
+        'OPCODES_BY_NAME',
+        'DISABLED_OPCODES',
+        'CScriptInvalidError',
+        'CScriptTruncatedPushDataError',
+        'CScript',
+        'SCRIPT_VERIFY_P2SH',
+        'SCRIPT_VERIFY_STRICTENC',
+        'SCRIPT_VERIFY_EVEN_S',
+        'SCRIPT_VERIFY_NOCACHE',
+        'SIGHASH_ALL',
+        'SIGHASH_NONE',
+        'SIGHASH_SINGLE',
+        'SIGHASH_ANYONECANPAY',
+        'FindAndDelete',
+        'RawSignatureHash',
+        'SignatureHash',
+        'IsLowDERSignature',
+)

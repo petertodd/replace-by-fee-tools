@@ -1,9 +1,17 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2014 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
-"""Low-level example of how to spend a standard pay-to-pubkey-hash txout"""
+"""Low-level example of how to spend a standard pay-to-pubkey-hash (P2PKH) txout"""
 
 import sys
 if sys.version_info.major < 3:
@@ -49,7 +57,7 @@ txin_scriptPubKey = CScript([OP_DUP, OP_HASH160, Hash160(seckey.pub), OP_EQUALVE
 txout = CMutableTxOut(0.001*COIN, CBitcoinAddress('1C7zdTfnkzmr13HfA2vNm5SJYRK6nEKyq8').to_scriptPubKey())
 
 # Create the unsigned transaction.
-tx = CMutableTransaction([txin],[txout])
+tx = CMutableTransaction([txin], [txout])
 
 # Calculate the signature hash for that transaction.
 sighash = SignatureHash(txin_scriptPubKey, tx, 0, SIGHASH_ALL)

@@ -1,17 +1,22 @@
-
+# Copyright (C) 2012-2015 The python-bitcoinlib developers
 #
-# core.py
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
-import struct
-import socket
 import binascii
 import hashlib
+import socket
+import struct
+import sys
+import time
 
 from .script import CScript
 
@@ -19,33 +24,39 @@ from .serialize import *
 
 # Core definitions
 COIN = 100000000
-MAX_MONEY = 21000000 * COIN
 MAX_BLOCK_SIZE = 1000000
 MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50
 
-BIP0031_VERSION = 60000
-PROTO_VERSION = 60002
-MIN_PROTO_VERSION = 209
+def MoneyRange(nValue, params=None):
+    global coreparams
+    if not params:
+      params = coreparams
 
-CADDR_TIME_VERSION = 31402
+    return 0 <= nValue <= params.MAX_MONEY
 
-def MoneyRange(nValue):
-        return 0 <= nValue <= MAX_MONEY
+def _py2_x(h):
+    """Convert a hex string to bytes"""
+    return binascii.unhexlify(h)
 
 def x(h):
     """Convert a hex string to bytes"""
-    import sys
-    if sys.version > '3':
-        return binascii.unhexlify(h.encode('utf8'))
-    else:
-        return binascii.unhexlify(h)
+    return binascii.unhexlify(h.encode('utf8'))
+
+def _py2_b2x(b):
+    """Convert bytes to a hex string"""
+    return binascii.hexlify(b)
 
 def b2x(b):
     """Convert bytes to a hex string"""
-    if sys.version > '3':
-        return binascii.hexlify(b).decode('utf8')
-    else:
-        return binascii.hexlify(b)
+    return binascii.hexlify(b).decode('utf8')
+
+def _py2_lx(h):
+    """Convert a little-endian hex string to bytes
+
+    Lets you write uint256's and uint160's the way the Satoshi codebase shows
+    them.
+    """
+    return binascii.unhexlify(h)[::-1]
 
 def lx(h):
     """Convert a little-endian hex string to bytes
@@ -53,11 +64,15 @@ def lx(h):
     Lets you write uint256's and uint160's the way the Satoshi codebase shows
     them.
     """
-    import sys
-    if sys.version > '3':
-        return binascii.unhexlify(h.encode('utf8'))[::-1]
-    else:
-        return binascii.unhexlify(h)[::-1]
+    return binascii.unhexlify(h.encode('utf8'))[::-1]
+
+def _py2_b2lx(b):
+    """Convert bytes to a little-endian hex string
+
+    Lets you show uint256's and uint160's the way the Satoshi codebase shows
+    them.
+    """
+    return binascii.hexlify(b[::-1])
 
 def b2lx(b):
     """Convert bytes to a little-endian hex string
@@ -65,10 +80,19 @@ def b2lx(b):
     Lets you show uint256's and uint160's the way the Satoshi codebase shows
     them.
     """
-    if sys.version > '3':
-        return binascii.hexlify(b[::-1]).decode('utf8')
-    else:
-        return binascii.hexlify(b[::-1])
+    return binascii.hexlify(b[::-1]).decode('utf8')
+
+if not (sys.version > '3'):
+    x = _py2_x
+    b2x = _py2_b2x
+    lx = _py2_lx
+    b2lx = _py2_b2lx
+
+del _py2_x
+del _py2_b2x
+del _py2_lx
+del _py2_b2lx
+
 
 def str_money_value(value):
     """Convert an integer money value to a fixed point string"""
@@ -129,6 +153,9 @@ class COutPoint(ImmutableSerializable):
         else:
             return 'COutPoint(lx(%r), %i)' % (b2lx(self.hash), self.n)
 
+    def __str__(self):
+        return '%s:%i' % (b2lx(self.hash), self.n)
+
     @classmethod
     def from_outpoint(cls, outpoint):
         """Create an immutable copy of an existing OutPoint
@@ -145,6 +172,7 @@ class COutPoint(ImmutableSerializable):
 @__make_mutable
 class CMutableOutPoint(COutPoint):
     """A mutable COutPoint"""
+    __slots__ = []
 
     @classmethod
     def from_outpoint(cls, outpoint):
@@ -175,7 +203,7 @@ class CTxIn(ImmutableSerializable):
         return cls(prevout, scriptSig, nSequence)
 
     def stream_serialize(self, f):
-        self.prevout.stream_serialize(f)
+        COutPoint.stream_serialize(self.prevout, f)
         BytesSerializer.stream_serialize(self.scriptSig, f)
         f.write(struct.pack(b"<I", self.nSequence))
 
@@ -201,6 +229,7 @@ class CTxIn(ImmutableSerializable):
 @__make_mutable
 class CMutableTxIn(CTxIn):
     """A mutable CTxIn"""
+    __slots__ = []
 
     def __init__(self, prevout=None, scriptSig=CScript(), nSequence = 0xffffffff):
         if not (0 <= nSequence <= 0xffffffff):
@@ -270,6 +299,7 @@ class CTxOut(ImmutableSerializable):
 @__make_mutable
 class CMutableTxOut(CTxOut):
     """A mutable CTxOut"""
+    __slots__ = []
 
     @classmethod
     def from_txout(cls, txout):
@@ -332,6 +362,7 @@ class CTransaction(ImmutableSerializable):
 @__make_mutable
 class CMutableTransaction(CTransaction):
     """A mutable transaction"""
+    __slots__ = []
 
     def __init__(self, vin=None, vout=None, nLockTime=0, nVersion=1):
         if not (0 <= nLockTime <= 0xffffffff):
@@ -417,11 +448,20 @@ class CBlock(CBlockHeader):
 
     @staticmethod
     def build_merkle_tree_from_txids(txids):
-        """Build a full merkle tree from txids
+        """Build a full CBlock merkle tree from txids
 
         txids - iterable of txids
 
-        Returns a new merkle tree in deepest first order.
+        Returns a new merkle tree in deepest first order. The last element is
+        the merkle root.
+
+        WARNING! If you're reading this because you're learning about crypto
+        and/or designing a new system that will use merkle trees, keep in mind
+        that the following merkle tree algorithm has a serious flaw related to
+        duplicate txids, resulting in a vulnerability. (CVE-2012-2459) Bitcoin
+        has since worked around the flaw, but for new applications you should
+        use something different; don't just copy-and-paste this code without
+        understanding the problem first.
         """
         merkle_tree = list(txids)
 
@@ -503,12 +543,14 @@ class CBlock(CBlockHeader):
 
 class CoreChainParams(object):
     """Define consensus-critical parameters of a given instance of the Bitcoin system"""
+    MAX_MONEY = None
     GENESIS_BLOCK = None
     PROOF_OF_WORK_LIMIT = None
     SUBSIDY_HALVING_INTERVAL = None
     NAME = None
 
 class CoreMainParams(CoreChainParams):
+    MAX_MONEY = 21000000 * COIN
     NAME = 'mainnet'
     GENESIS_BLOCK = CBlock.deserialize(x('0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c0101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4d04ffff001d0104455468652054696d65732030332f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000'))
     SUBSIDY_HALVING_INTERVAL = 210000
@@ -552,6 +594,7 @@ def CheckTransaction(tx):
 
     Raises CheckTransactionError
     """
+    global coreparams
 
     if not tx.vin:
         raise CheckTransactionError("CheckTransaction() : vin empty")
@@ -567,7 +610,7 @@ def CheckTransaction(tx):
     for txout in tx.vout:
         if txout.nValue < 0:
             raise CheckTransactionError("CheckTransaction() : txout.nValue negative")
-        if txout.nValue > MAX_MONEY:
+        if txout.nValue > coreparams.MAX_MONEY:
             raise CheckTransactionError("CheckTransaction() : txout.nValue too high")
         nValueOut += txout.nValue
         if not MoneyRange(nValueOut):
@@ -698,3 +741,41 @@ def CheckBlock(block, fCheckPoW = True, fCheckMerkleRoot = True, cur_time=None):
     # Check merkle root
     if fCheckMerkleRoot and block.hashMerkleRoot != block.calc_merkle_root():
         raise CheckBlockError("CheckBlock() : hashMerkleRoot mismatch")
+
+__all__ = (
+        'Hash',
+        'Hash160',
+        'COIN',
+        'MAX_BLOCK_SIZE',
+        'MAX_BLOCK_SIGOPS',
+        'MoneyRange',
+        'x',
+        'b2x',
+        'lx',
+        'b2lx',
+        'str_money_value',
+        'ValidationError',
+        'COutPoint',
+        'CMutableOutPoint',
+        'CTxIn',
+        'CMutableTxIn',
+        'CTxOut',
+        'CMutableTxOut',
+        'CTransaction',
+        'CMutableTransaction',
+        'CBlockHeader',
+        'CBlock',
+        'CoreChainParams',
+        'CoreMainParams',
+        'CoreTestNetParams',
+        'CoreRegTestParams',
+        'CheckTransactionError',
+        'CheckTransaction',
+        'CheckBlockHeaderError',
+        'CheckProofOfWorkError',
+        'CheckProofOfWork',
+        'CheckBlockHeader',
+        'CheckBlockError',
+        'GetLegacySigOpCount',
+        'CheckBlock',
+)

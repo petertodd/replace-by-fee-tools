@@ -1,5 +1,13 @@
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2013-2014 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -12,14 +20,14 @@ from binascii import unhexlify
 from bitcoin.base58 import *
 
 
-def load_test_vector(name):
+def load_test_vectors(name):
     with open(os.path.dirname(__file__) + '/data/' + name, 'r') as fd:
         for testcase in json.load(fd):
             yield testcase
 
 class Test_base58(unittest.TestCase):
     def test_encode_decode(self):
-        for exp_bin, exp_base58 in load_test_vector('base58_encode_decode.json'):
+        for exp_bin, exp_base58 in load_test_vectors('base58_encode_decode.json'):
             exp_bin = unhexlify(exp_bin.encode('utf8'))
 
             act_base58 = encode(exp_bin)

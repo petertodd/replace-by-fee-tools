@@ -1,10 +1,15 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
+
+# Copyright (C) 2013-2014 The python-bitcoinlib developers
 #
-# make-bootstrap-rpc.py
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Make a boostrap.dat file by getting the blocks from the RPC interface."""
 
@@ -40,14 +45,14 @@ total_bytes = 0
 start_time = time.time()
 
 fd = sys.stdout.buffer
-for i in range(n+1):
+for i in range(n + 1):
     block = proxy.getblock(proxy.getblockhash(i))
 
     block_bytes = block.serialize()
 
     total_bytes += len(block_bytes)
     print('%.2f KB/s, height %d, %d bytes' %
-            ((total_bytes/1000)/(time.time() - start_time),
+            ((total_bytes / 1000) / (time.time() - start_time),
              i, len(block_bytes)),
           file=sys.stderr)
 

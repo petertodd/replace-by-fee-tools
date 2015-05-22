@@ -1,5 +1,13 @@
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2013-2015 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -295,8 +303,87 @@ class Test_CScript(unittest.TestCase):
         T('61', False)
 
     def test_is_push_only_on_invalid_pushdata(self):
-        invalid_script = CScript(b'\x01')
-        self.assertFalse(invalid_script.is_push_only())
+        def T(hex_script):
+            invalid_script = CScript(x(hex_script))
+            self.assertFalse(invalid_script.is_push_only())
+
+        T('01')
+        T('02ff')
+        T('4b')
+        T('4c01')
+        T('4c02ff')
+        T('4d')
+        T('4d0100')
+        T('4d0200ff')
+        T('4e')
+        T('4e01000000')
+        T('4e02000000ff')
+
+    def test_has_canonical_pushes(self):
+        def T(hex_script, expected_result):
+            script = CScript(x(hex_script))
+            self.assertEqual(script.has_canonical_pushes(), expected_result)
+
+        T('', True)
+        T('00', True)
+        T('FF', True)
+
+        # could have used an OP_n code, rather than a 1-byte push
+        T('0100', False)
+        T('0101', False)
+        T('0102', False)
+        T('0103', False)
+        T('0104', False)
+        T('0105', False)
+        T('0106', False)
+        T('0107', False)
+        T('0108', False)
+        T('0109', False)
+        T('010A', False)
+        T('010B', False)
+        T('010C', False)
+        T('010D', False)
+        T('010E', False)
+        T('010F', False)
+        T('0110', False)
+        T('0111', True)
+
+        # Could have used a normal n-byte push, rather than OP_PUSHDATA1
+        T('4c00', False)
+        T('4c0100', False)
+        T('4c01FF', False)
+        T('4b' + '00'*75, True)
+        T('4c4b' + '00'*75, False)
+        T('4c4c' + '00'*76, True)
+
+        # Could have used a OP_PUSHDATA1.
+        T('4d0000', False)
+        T('4d0100FF', False)
+        T('4dFF00' + 'FF'*0xFF, False)
+        T('4d0001' + 'FF'*0x100, True)
+
+        # Could have used a OP_PUSHDATA2.
+        T('4e00000000', False)
+        T('4e01000000FF', False)
+        T('4eFFFF0000' + 'FF'*0xFFFF, False)
+        T('4e00000100' + 'FF'*0x10000, True)
+
+    def test_has_canonical_pushes_with_invalid_truncated_script(self):
+        def T(hex_script):
+            script = CScript(x(hex_script))
+            self.assertEqual(script.has_canonical_pushes(), False)
+
+        T('01')
+        T('02ff')
+        T('4b')
+        T('4c01')
+        T('4c02ff')
+        T('4d')
+        T('4d0100')
+        T('4d0200ff')
+        T('4e')
+        T('4e01000000')
+        T('4e02000000ff')
 
     def test_is_unspendable(self):
         def T(serialized, b):
@@ -339,3 +426,11 @@ class Test_CScript(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             CScript([b'a' * 518]).to_p2sh_scriptPubKey()
+
+class Test_IsLowDERSignature(unittest.TestCase):
+    def test_high_s_value(self):
+        sig = x('3046022100820121109528efda8bb20ca28788639e5ba5b365e0a84f8bd85744321e7312c6022100a7c86a21446daa405306fe10d0a9906e37d1a2c6b6fdfaaf6700053058029bbe')
+        self.assertFalse(IsLowDERSignature(sig))
+    def test_low_s_value(self):
+        sig = x('3045022100b135074e08cc93904a1712b2600d3cb01899a5b1cc7498caa4b8585bcf5f27e7022074ab544045285baef0a63f0fb4c95e577dcbf5c969c0bf47c7da8e478909d669')
+        self.assertTrue(IsLowDERSignature(sig))

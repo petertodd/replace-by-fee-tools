@@ -1,10 +1,13 @@
-
+# Copyright (C) 2013-2014 The python-bitcoinlib developers
 #
-# bloom.py
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Bloom filter support"""
 
@@ -17,7 +20,7 @@ import math
 import bitcoin.core
 import bitcoin.core.serialize
 
-def ROTL32(x, r):
+def _ROTL32(x, r):
     assert x <= 0xFFFFFFFF
     return ((x << r) & 0xFFFFFFFF) | (x >> (32 - r))
 
@@ -41,11 +44,11 @@ def MurmurHash3(nHashSeed, vDataToHash):
         k1 = struct.unpack(b"<L", vDataToHash[i:i+4])[0]
 
         k1 = (k1 * c1) & 0xFFFFFFFF
-        k1 = ROTL32(k1, 15)
+        k1 = _ROTL32(k1, 15)
         k1 = (k1 * c2) & 0xFFFFFFFF
 
         h1 ^= k1
-        h1 = ROTL32(h1, 13)
+        h1 = _ROTL32(h1, 13)
         h1 = (((h1*5) & 0xFFFFFFFF) + 0xe6546b64) & 0xFFFFFFFF
 
         i += 4
@@ -67,7 +70,7 @@ def MurmurHash3(nHashSeed, vDataToHash):
 
     k1 &= 0xFFFFFFFF
     k1 = (k1 * c1) & 0xFFFFFFFF
-    k1 = ROTL32(k1, 15)
+    k1 = _ROTL32(k1, 15)
     k1 = (k1 * c2) & 0xFFFFFFFF
     h1 ^= k1
 
@@ -181,3 +184,8 @@ class CBloomFilter(bitcoin.core.serialize.Serializable):
             # 2.7 has problems with f.write(bytearray())
             bitcoin.core.serialize.BytesSerializer.stream_serialize(bytes(self.vData), f)
         f.write(self.__struct.pack(self.nHashFuncs, self.nTweak, self.nFlags))
+
+__all__ = (
+        'MurmurHash3',
+        'CBloomFilter',
+)

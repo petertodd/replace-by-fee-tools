@@ -1,30 +1,32 @@
-
+# Copyright (C) 2011 Sam Rushing
+# Copyright (C) 2013-2014 The python-bitcoinlib developers
 #
-# base58.py
-# Original source: git://github.com/joric/brutus.git
-# which was forked from git://github.com/samrushing/caesure.git
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Base58 encoding and decoding"""
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
-bchr = chr
-bord = ord
+_bchr = chr
+_bord = ord
 if sys.version > '3':
-        long = int
-        bchr = lambda x: bytes([x])
-        bord = lambda x: x
+    long = int
+    _bchr = lambda x: bytes([x])
+    _bord = lambda x: x
 
 import binascii
 
 import bitcoin.core
 
-b58_digits = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+B58_DIGITS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 class Base58Error(Exception):
     pass
@@ -45,21 +47,22 @@ def encode(b):
     # Divide that integer into bas58
     res = []
     while n > 0:
-        n, r = divmod (n, 58)
-        res.append(b58_digits[r])
+        n, r = divmod(n, 58)
+        res.append(B58_DIGITS[r])
     res = ''.join(res[::-1])
 
     # Encode leading zeros as base58 zeros
-    import sys
     czero = b'\x00'
     if sys.version > '3':
         # In Python3 indexing a bytes returns numbers, not characters.
         czero = 0
     pad = 0
     for c in b:
-        if c == czero: pad += 1
-        else: break
-    return b58_digits[0] * pad + res
+        if c == czero:
+            pad += 1
+        else:
+            break
+    return B58_DIGITS[0] * pad + res
 
 def decode(s):
     """Decode a base58-encoding string, returning bytes"""
@@ -70,9 +73,9 @@ def decode(s):
     n = 0
     for c in s:
         n *= 58
-        if c not in b58_digits:
+        if c not in B58_DIGITS:
             raise InvalidBase58Error('Character %r is not a valid base58 character' % c)
-        digit = b58_digits.index(c)
+        digit = B58_DIGITS.index(c)
         n += digit
 
     # Convert the integer to bytes
@@ -84,7 +87,7 @@ def decode(s):
     # Add padding back.
     pad = 0
     for c in s[:-1]:
-        if c == b58_digits[0]: pad += 1
+        if c == B58_DIGITS[0]: pad += 1
         else: break
     return b'\x00' * pad + res
 
@@ -105,7 +108,7 @@ class CBase58Data(bytes):
         if check0 != check1:
             raise Base58ChecksumError('Checksum mismatch: expected %r, calculated %r' % (check0, check1))
 
-        return cls.from_bytes(data, bord(verbyte[0]))
+        return cls.from_bytes(data, _bord(verbyte[0]))
 
     def __init__(self, s):
         """Initialize from base58-encoded string
@@ -135,9 +138,19 @@ class CBase58Data(bytes):
 
     def __str__(self):
         """Convert to string"""
-        vs = bchr(self.nVersion) + self
+        vs = _bchr(self.nVersion) + self
         check = bitcoin.core.Hash(vs)[0:4]
         return encode(vs + check)
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, str(self))
+
+__all__ = (
+        'B58_DIGITS',
+        'Base58Error',
+        'InvalidBase58Error',
+        'encode',
+        'decode',
+        'Base58ChecksumError',
+        'CBase58Data',
+)

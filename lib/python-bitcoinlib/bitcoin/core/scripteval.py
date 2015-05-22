@@ -1,10 +1,13 @@
-
+# Copyright (C) 2012-2014 The python-bitcoinlib developers
 #
-# scripteval.py
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Script evaluation
 
@@ -16,34 +19,30 @@ module.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
-bord = ord
+_bord = ord
 if sys.version > '3':
     long = int
-    bord = lambda x: x
+    _bord = lambda x: x
 
 import copy
 import hashlib
 
 import bitcoin.core
+import bitcoin.core._bignum
 import bitcoin.core.key
 import bitcoin.core.serialize
 
+# Importing everything for simplicity; note that we use __all__ at the end so
+# we're not exporting the whole contents of the script module.
 from bitcoin.core.script import *
 
-nMaxNumSize = 4
+MAX_NUM_SIZE = 4
 MAX_STACK_ITEMS = 1000
 
 SCRIPT_VERIFY_P2SH = object()
 SCRIPT_VERIFY_STRICTENC = object()
 SCRIPT_VERIFY_EVEN_S = object()
 SCRIPT_VERIFY_NOCACHE = object()
-
-# Invalid even when occuring in an unexecuted OP_IF branch due to either being
-# disabled, or never implemented.
-disabled_opcodes = set((OP_VERIF, OP_VERNOTIF,
-                        OP_CAT, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_INVERT, OP_AND,
-                        OP_OR, OP_XOR, OP_2MUL, OP_2DIV, OP_MUL, OP_DIV, OP_MOD,
-                        OP_LSHIFT, OP_RSHIFT))
 
 class EvalScriptError(bitcoin.core.ValidationError):
     """Base class for exceptions raised when a script fails during EvalScript()
@@ -98,14 +97,14 @@ class VerifyOpFailedError(EvalScriptError):
                                                   **kwargs)
 
 def _CastToBigNum(s, err_raiser):
-    v = bitcoin.core.bignum.vch2bn(s)
-    if len(s) > nMaxNumSize:
+    v = bitcoin.core._bignum.vch2bn(s)
+    if len(s) > MAX_NUM_SIZE:
         raise err_raiser(EvalScriptError, 'CastToBigNum() : overflow')
     return v
 
 def _CastToBool(s):
     for i in range(len(s)):
-        sv = bord(s[i])
+        sv = _bord(s[i])
         if sv != 0:
             if (i == (len(s) - 1)) and (sv == 0x80):
                 return False
@@ -120,7 +119,7 @@ def _CheckSig(sig, pubkey, script, txTo, inIdx, err_raiser):
 
     if len(sig) == 0:
         return False
-    hashtype = bord(sig[-1])
+    hashtype = _bord(sig[-1])
     sig = sig[:-1]
 
     # Raw signature hash due to the SIGHASH_SINGLE bug
@@ -169,7 +168,7 @@ def _CheckMultiSig(opcode, script, stack, txTo, inIdx, err_raiser, nOpCount):
     # Of course, this can only come up in very contrived cases now that
     # scriptSig and scriptPubKey are processed separately.
     for k in range(sigs_count):
-        sig = stack[-isig-k]
+        sig = stack[-isig - k]
         script = FindAndDelete(script, CScript([sig]))
 
     success = True
@@ -204,7 +203,7 @@ def _CheckMultiSig(opcode, script, stack, txTo, inIdx, err_raiser, nOpCount):
 
 
 # OP_2MUL and OP_2DIV are *not* included in this list as they are disabled
-ISA_UNOP = {
+_ISA_UNOP = {
     OP_1ADD,
     OP_1SUB,
     OP_NEGATE,
@@ -241,11 +240,11 @@ def _UnaryOp(opcode, stack, err_raiser):
     else:
         raise AssertionError("Unknown unary opcode encountered; this should not happen")
 
-    stack.append(bitcoin.core.bignum.bn2vch(bn))
+    stack.append(bitcoin.core._bignum.bn2vch(bn))
 
 
 # OP_LSHIFT and OP_RSHIFT are *not* included in this list as they are disabled
-ISA_BINOP = {
+_ISA_BINOP = {
     OP_ADD,
     OP_SUB,
     OP_BOOLAND,
@@ -328,7 +327,7 @@ def _BinOp(opcode, stack, err_raiser):
 
     stack.pop()
     stack.pop()
-    stack.append(bitcoin.core.bignum.bn2vch(bn))
+    stack.append(bitcoin.core._bignum.bn2vch(bn))
 
 
 def _CheckExec(vfExec):
@@ -374,7 +373,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
                     altstack=altstack, vfExec=vfExec, pbegincodehash=pbegincodehash, nOpCount=nOpCount[0])
 
 
-        if sop in disabled_opcodes:
+        if sop in DISABLED_OPCODES:
             err_raiser(EvalScriptError, 'opcode %s is disabled' % OPCODE_NAMES[sop])
 
         if sop > OP_16:
@@ -401,12 +400,12 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
 
             if sop == OP_1NEGATE or ((sop >= OP_1) and (sop <= OP_16)):
                 v = sop - (OP_1 - 1)
-                stack.append(bitcoin.core.bignum.bn2vch(v))
+                stack.append(bitcoin.core._bignum.bn2vch(v))
 
-            elif sop in ISA_BINOP:
+            elif sop in _ISA_BINOP:
                 _BinOp(sop, stack, err_raiser)
 
-            elif sop in ISA_UNOP:
+            elif sop in _ISA_UNOP:
                 _UnaryOp(sop, stack, err_raiser)
 
             elif sop == OP_2DROP:
@@ -492,7 +491,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
 
             elif sop == OP_DEPTH:
                 bn = len(stack)
-                stack.append(bitcoin.core.bignum.bn2vch(bn))
+                stack.append(bitcoin.core._bignum.bn2vch(bn))
 
             elif sop == OP_DROP:
                 check_args(1)
@@ -612,7 +611,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
             elif sop == OP_SIZE:
                 check_args(1)
                 bn = len(stack[-1])
-                stack.append(bitcoin.core.bignum.bn2vch(bn))
+                stack.append(bitcoin.core._bignum.bn2vch(bn))
 
             elif sop == OP_SHA1:
                 check_args(1)
@@ -766,3 +765,22 @@ def VerifySignature(txFrom, txTo, inIdx):
         raise VerifySignatureError("prevout hash does not match txFrom")
 
     VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, inIdx)
+
+
+__all__ = (
+        'MAX_STACK_ITEMS',
+        'SCRIPT_VERIFY_P2SH',
+        'SCRIPT_VERIFY_STRICTENC',
+        'SCRIPT_VERIFY_EVEN_S',
+        'SCRIPT_VERIFY_NOCACHE',
+        'EvalScriptError',
+        'MaxOpCountError',
+        'MissingOpArgumentsError',
+        'ArgumentsInvalidError',
+        'VerifyOpFailedError',
+        'EvalScript',
+        'VerifyScriptError',
+        'VerifyScript',
+        'VerifySignatureError',
+        'VerifySignature',
+)

@@ -5,6 +5,8 @@ This Python2/3 library provides an easy interface to the bitcoin data
 structures and protocol. The approach is low-level and "ground up", with a
 focus on providing tools to manipulate the internals of how Bitcoin works.
 
+"The Swiss Army Knife of the Bitcoin protocol." - Wladimir J. van der Laan
+
 
 Requirements
 ------------
@@ -24,14 +26,13 @@ consensus critical and non-consensus-critical.
 
 bitcoin.core            - Basic core definitions, datastructures, and
                           (context-independent) validation
-bitcoin.core.bignum     - Bignum handling
 bitcoin.core.key        - ECC pubkeys
 bitcoin.core.script     - Scripts and opcodes
 bitcoin.core.scripteval - Script evaluation/verification
 bitcoin.core.serialize  - Serialization
 
 In the future the bitcoin.core may use the Satoshi sourcecode directly as a
-libary. Non-consensus critical modules include the following:
+library. Non-consensus critical modules include the following:
 
 bitcoin            - Chain selection
 bitcoin.base58     - Base58 encoding
@@ -67,6 +68,14 @@ accomodate this. In addition see b2x() and b2lx() for conversion from bytes to
 big/little-endian hex.
 
 
+Module import style
+-------------------
+
+While not always good style, it's often convenient for quick scripts if import
+* can be used. To support that all the modules have __all__ defined
+appropriately.
+
+
 Example Code
 ------------
 
@@ -98,5 +107,6 @@ Unit tests
 
 Under bitcoin/tests using test data from Bitcoin Core. To run them:
 
-python -m unittest discover
-python3 -m unittest discover
+    python -m unittest discover && python3 -m unittest discover
+
+Please run the tests on both Python2 and Python3 for your pull-reqs!

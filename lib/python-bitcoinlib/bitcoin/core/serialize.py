@@ -1,10 +1,13 @@
-
+# Copyright (C) 2012-2014 The python-bitcoinlib developers
 #
-# serialize.py
+# This file is part of python-bitcoinlib.
 #
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
 #
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Serialization routines
 
@@ -20,13 +23,13 @@ import struct
 import sys
 
 if sys.version > '3':
-    bchr = lambda x: bytes([x])
-    bord = lambda x: x[0]
-    from io import BytesIO
+    _bchr = lambda x: bytes([x])
+    _bord = lambda x: x[0]
+    from io import BytesIO as _BytesIO
 else:
-    bchr = chr
-    bord = ord
-    from cStringIO import StringIO as BytesIO
+    _bchr = chr
+    _bord = ord
+    from cStringIO import StringIO as _BytesIO
 
 MAX_SIZE = 0x02000000
 
@@ -46,12 +49,23 @@ class SerializationError(Exception):
     """Base class for serialization errors"""
 
 
-class SerializationTruncationError(Exception):
+class SerializationTruncationError(SerializationError):
     """Serialized data was truncated
 
     Thrown by deserialize() and stream_deserialize()
     """
 
+class DeserializationExtraDataError(SerializationError):
+    """Deserialized data had extra data at the end
+
+    Thrown by deserialize() when not all data is consumed during
+    deserialization. The deserialized object and extra padding not consumed are
+    saved.
+    """
+    def __init__(self, msg, obj, padding):
+        super(DeserializationExtraDataError, self).__init__(msg)
+        self.obj = obj
+        self.padding = padding
 
 def ser_read(f, n):
     """Read from a stream safely
@@ -61,7 +75,7 @@ def ser_read(f, n):
     functions.
     """
     if n > MAX_SIZE:
-        raise SerializationError('Asked to read 0x%x bytes; MAX_SIZE exceeded')
+        raise SerializationError('Asked to read 0x%x bytes; MAX_SIZE exceeded' % n)
     r = f.read(n)
     if len(r) < n:
         raise SerializationTruncationError('Asked to read %i bytes, but only got %i' % (n, len(r)))
@@ -70,6 +84,9 @@ def ser_read(f, n):
 
 class Serializable(object):
     """Base class for serializable objects"""
+
+    __slots__ = []
+
     def stream_serialize(self, f):
         """Serialize to a stream"""
         raise NotImplementedError
@@ -81,14 +98,27 @@ class Serializable(object):
 
     def serialize(self):
         """Serialize, returning bytes"""
-        f = BytesIO()
+        f = _BytesIO()
         self.stream_serialize(f)
         return f.getvalue()
 
     @classmethod
-    def deserialize(cls, buf):
-        """Deserialize bytes, returning an instance"""
-        return cls.stream_deserialize(BytesIO(buf))
+    def deserialize(cls, buf, allow_padding=False):
+        """Deserialize bytes, returning an instance
+
+        allow_padding - Allow buf to include extra padding. (default False)
+
+        If allow_padding is False and not all bytes are consumed during
+        deserialization DeserializationExtraDataError will be raised.
+        """
+        fd = _BytesIO(buf)
+        r = cls.stream_deserialize(fd)
+        if not allow_padding:
+            padding = fd.read()
+            if len(padding) != 0:
+                raise DeserializationExtraDataError('Not all bytes consumed during deserialization',
+                                                    r, padding)
+        return r
 
     def GetHash(self):
         """Return the hash of the serialized object"""
@@ -148,13 +178,13 @@ class Serializer(object):
 
     @classmethod
     def serialize(cls, obj):
-        f = BytesIO()
+        f = _BytesIO()
         cls.stream_serialize(obj, f)
         return f.getvalue()
 
     @classmethod
     def deserialize(cls, buf):
-        return cls.stream_deserialize(BytesIO(buf))
+        return cls.stream_deserialize(_BytesIO(buf))
 
 
 class VarIntSerializer(Serializer):
@@ -164,20 +194,20 @@ class VarIntSerializer(Serializer):
         if i < 0:
             raise ValueError('varint must be non-negative integer')
         elif i < 0xfd:
-            f.write(bchr(i))
+            f.write(_bchr(i))
         elif i <= 0xffff:
-            f.write(bchr(0xfd))
+            f.write(_bchr(0xfd))
             f.write(struct.pack(b'<H', i))
         elif i <= 0xffffffff:
-            f.write(bchr(0xfe))
+            f.write(_bchr(0xfe))
             f.write(struct.pack(b'<I', i))
         else:
-            f.write(bchr(0xff))
+            f.write(_bchr(0xff))
             f.write(struct.pack(b'<Q', i))
 
     @classmethod
     def stream_deserialize(cls, f):
-        r = bord(ser_read(f, 1))
+        r = _bord(ser_read(f, 1))
         if r < 0xfd:
             return r
         elif r == 0xfd:
@@ -281,12 +311,55 @@ def uint256_from_compact(c):
     Used for the nBits compact encoding of the target in the block header.
     """
     nbytes = (c >> 24) & 0xFF
-    v = (c & 0xFFFFFF) << (8 * (nbytes - 3))
+    if nbytes <= 3:
+        v = (c & 0xFFFFFF) >> 8 * (3 - nbytes)
+    else:
+        v = (c & 0xFFFFFF) << (8 * (nbytes - 3))
     return v
 
+def compact_from_uint256(v):
+    """Convert uint256 to compact encoding
+    """
+    nbytes = (v.bit_length() + 7) >> 3
+    compact = 0
+    if nbytes <= 3:
+        compact = (v & 0xFFFFFF) << 8 * (3 - nbytes)
+    else:
+        compact = v >> 8 * (nbytes - 3)
+        compact = compact & 0xFFFFFF
+
+    # If the sign bit (0x00800000) is set, divide the mantissa by 256 and
+    # increase the exponent to get an encoding without it set.
+    if compact & 0x00800000:
+        compact >>= 8
+        nbytes += 1
+
+    return compact | nbytes << 24
 
 def uint256_to_shortstr(u):
     s = "%064x" % (u,)
     return s[:16]
 
 
+__all__ = (
+        'MAX_SIZE',
+        'Hash',
+        'Hash160',
+        'SerializationError',
+        'SerializationTruncationError',
+        'DeserializationExtraDataError',
+        'ser_read',
+        'Serializable',
+        'ImmutableSerializable',
+        'Serializer',
+        'VarIntSerializer',
+        'BytesSerializer',
+        'VectorSerializer',
+        'uint256VectorSerializer',
+        'intVectorSerialzer',
+        'VarStringSerializer',
+        'uint256_from_str',
+        'uint256_from_compact',
+        'compact_from_uint256',
+        'uint256_to_shortstr',
+)

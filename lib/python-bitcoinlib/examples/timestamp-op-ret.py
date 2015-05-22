@@ -1,7 +1,15 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2014 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Example of timestamping a file via OP_RETURN"""
 
@@ -32,7 +40,7 @@ for f in sys.argv[1:]:
         else:
             raise exp
     except IOError as exp:
-        print(exp,file=sys.stderr)
+        print(exp, file=sys.stderr)
         continue
 
 for digest in digests:
@@ -47,7 +55,7 @@ for digest in digests:
     change_pubkey = proxy.validateaddress(change_addr)['pubkey']
     change_out = CMutableTxOut(MAX_MONEY, CScript([change_pubkey, OP_CHECKSIG]))
 
-    digest_outs = [CMutableTxOut(0, CScript([script.OP_RETURN, digest]))]
+    digest_outs = [CMutableTxOut(0, CScript([OP_RETURN, digest]))]
 
     txouts = [change_out] + digest_outs
 
@@ -56,14 +64,14 @@ for digest in digests:
 
     FEE_PER_BYTE = 0.00025*COIN/1000
     while True:
-        tx.vout[0].nValue = int(value_in - max(len(tx.serialize())*FEE_PER_BYTE, 0.00011*COIN))
+        tx.vout[0].nValue = int(value_in - max(len(tx.serialize()) * FEE_PER_BYTE, 0.00011*COIN))
 
         r = proxy.signrawtransaction(tx)
         assert r['complete']
         tx = r['tx']
 
-        if value_in - tx.vout[0].nValue >= len(tx.serialize())*FEE_PER_BYTE:
+        if value_in - tx.vout[0].nValue >= len(tx.serialize()) * FEE_PER_BYTE:
             print(b2x(tx.serialize()))
-            print(len(tx.serialize()),'bytes',file=sys.stderr)
+            print(len(tx.serialize()), 'bytes', file=sys.stderr)
             print(b2lx(proxy.sendrawtransaction(tx)))
             break

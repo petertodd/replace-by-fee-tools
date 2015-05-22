@@ -1,7 +1,15 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2014 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 """Low-level example of how to spend a P2SH/BIP16 txout"""
 
@@ -58,7 +66,7 @@ txin = CMutableTxIn(COutPoint(txid, vout))
 txout = CMutableTxOut(0.0005*COIN, CBitcoinAddress('323uf9MgLaSn9T7vDaK1cGAZ2qpvYUuqSp').to_scriptPubKey())
 
 # Create the unsigned transaction.
-tx = CMutableTransaction([txin],[txout])
+tx = CMutableTransaction([txin], [txout])
 
 # Calculate the signature hash for that transaction. Note how the script we use
 # is the redeemScript, not the scriptPubKey. That's because when the CHECKSIG

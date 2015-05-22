@@ -1,5 +1,13 @@
-# Distributed under the MIT/X11 software license, see the accompanying
-# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+# Copyright (C) 2013-2015 The python-bitcoinlib developers
+#
+# This file is part of python-bitcoinlib.
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoinlib, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -23,6 +31,21 @@ class Test_str_value(unittest.TestCase):
         T(1010000000, '10.1')
         T(1001000000, '10.01')
         T(1012345678, '10.12345678')
+
+class Test_Money(unittest.TestCase):
+    def test_MoneyRange(self):
+        self.assertFalse(MoneyRange(-1))
+        self.assertTrue(MoneyRange(0))
+        self.assertTrue(MoneyRange(100000))
+        self.assertTrue(MoneyRange(21000000 * COIN)) # Maximum money on Bitcoin network
+        self.assertFalse(MoneyRange(21000001 * COIN))
+
+    def test_MoneyRangeCustomParams(self):
+        highMaxParamsType = type(str('CoreHighMainParams'), (CoreMainParams,object), {'MAX_MONEY': 22000000 * COIN })
+        highMaxParams = highMaxParamsType()
+        self.assertTrue(MoneyRange(21000001 * COIN, highMaxParams))
+        self.assertTrue(MoneyRange(22000000 * COIN, highMaxParams))
+        self.assertFalse(MoneyRange(22000001 * COIN, highMaxParams))
 
 class Test_CBlockHeader(unittest.TestCase):
     def test_serialization(self):

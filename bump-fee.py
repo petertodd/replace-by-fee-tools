@@ -26,6 +26,9 @@ parser.add_argument('-t', action='store_true',
 parser.add_argument('-n', action='store_true',
                     dest='dryrun',
                     help="Dry-run; don't actually send the transaction")
+parser.add_argument('-s', action='store_true',
+                    dest='first_seen_safe',
+                    help="First-seen-safe rules; do not decrease the value of any txouts")
 parser.add_argument('-r', action='store', type=float,
                     dest='ratio',
                     metavar='RATIO',
@@ -82,6 +85,11 @@ if change_txout is None:
     change_txout = CMutableTxOut(0, addr.to_scriptPubKey())
     tx.vout.append(change_txout)
 
+min_change_txout_nValue = 0
+if args.first_seen_safe:
+    min_change_txout_nValue = change_txout.nValue
+    logging.debug('First-seen-safe enabled: will not reduce change txout value below %s BTC' % \
+                  str_money_value(min_change_txout_nValue))
 
 # Find total value in
 value_in = 0
@@ -120,11 +128,11 @@ while (value_in-value_out) / len(tx.serialize()) < desired_fees_per_byte:
 
     logging.debug('Delta fee: %s' % str_money_value(delta_fee))
 
-    # If we simply subtract that from the change output are we still above the
-    # dust threshold?
-    if change_txout.nValue - delta_fee > DUST:
-        change_txout.nValue -= delta_fee
-        value_out -= delta_fee
+    # Can we simply reduce the value of the change output?
+    new_change_txout_nValue = change_txout.nValue - delta_fee
+    if new_change_txout_nValue > DUST and new_change_txout_nValue >= min_change_txout_nValue:
+        value_out -= change_txout.nValue - new_change_txout_nValue
+        change_txout.nValue = new_change_txout_nValue
 
     else:
         # Looks like we need to add another input. We could be clever about

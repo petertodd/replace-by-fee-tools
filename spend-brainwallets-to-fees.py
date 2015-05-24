@@ -129,7 +129,7 @@ while True:
                                       nVersion=new_tx.nVersion)
 
             try:
-                to_fees_txid = rpc.sendrawtransaction(to_fees_tx)
+                to_fees_txid = rpc.sendrawtransaction(to_fees_tx, True)
                 logging.info('Replaced tx %s with all-to-fees %s' % (b2lx(new_txid), b2lx(to_fees_txid)))
 
             except bitcoin.rpc.JSONRPCException as exp:
@@ -138,7 +138,7 @@ while True:
 
     for burn_tx in burn_txs:
         try:
-            txid = rpc.sendrawtransaction(burn_tx)
+            txid = rpc.sendrawtransaction(burn_tx, True)
             logging.info('Sent burn tx %s' % b2lx(txid))
         except bitcoin.rpc.JSONRPCException as err:
             logging.info('Got error %s while sending %s' % (err, b2x(burn_tx.serialize())))

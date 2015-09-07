@@ -102,7 +102,7 @@ class MsgSerializable(Serializable):
             #        print("Going to deserialize '%s'" % msg)
             return cls.msg_deser(_BytesIO(msg))
         else:
-            print("Command '%s' not in messagemap" % str(command, 'ascii'))
+            print("Command '%s' not in messagemap" % repr(command))
             return None
 
     def stream_serialize(self, f):
@@ -121,7 +121,8 @@ class msg_version(MsgSerializable):
         self.addrTo = CAddress(PROTO_VERSION)
         self.addrFrom = CAddress(PROTO_VERSION)
         self.nNonce = random.getrandbits(64)
-        self.strSubVer = b'/python-bitcoin-0.0.1/'
+        self.strSubVer = (b'/python-bitcoinlib:' +
+                          bitcoin.__version__.encode('ascii') + b'/')
         self.nStartingHeight = -1
 
     @classmethod

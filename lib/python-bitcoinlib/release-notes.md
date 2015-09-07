@@ -1,6 +1,29 @@
 python-bitcoinlib release notes
 ===============================
 
+v0.5.0
+======
+
+Major fix: Fixed OpenSSL related crashes on OSX and Arch Linux. Big thanks to
+everyone who helped fix this!
+
+Breaking API changes:
+
+* Proxy no longer has ``__getattr__`` to support arbitrary methods. Use
+  RawProxy or Proxy.call instead. This allows new wrappers to be added safely.
+  See docstrings for details.
+
+New features:
+
+* New RPC calls: getbestblockhash, getblockcount, getmininginfo
+* Signing and verification of Bitcoin Core compatible messages. (w/ pubkey recovery)
+* Tox tests
+* Sphinx docs
+
+Notable bugfixes:
+
+* getinfo() now works where disablewallet=1
+
 v0.4.0
 ======
 

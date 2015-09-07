@@ -160,11 +160,11 @@ class COutPoint(ImmutableSerializable):
     def from_outpoint(cls, outpoint):
         """Create an immutable copy of an existing OutPoint
 
-        If output is already immutable (outpoint.__class__ is COutPoint) it is
+        If outpoint is already immutable (outpoint.__class__ is COutPoint) it is
         returned directly.
         """
-        if output.__class__ is COutPoint:
-            return output
+        if outpoint.__class__ is COutPoint:
+            return outpoint
 
         else:
             return cls(outpoint.hash, outpoint.n)
@@ -663,6 +663,7 @@ def CheckBlockHeader(block_header, fCheckPoW = True, cur_time=None):
     """Context independent CBlockHeader checks.
 
     fCheckPoW - Check proof-of-work.
+
     cur_time  - Current time. Defaults to time.time()
 
     Raises CBlockHeaderError if block header is invalid.
@@ -699,7 +700,9 @@ def CheckBlock(block, fCheckPoW = True, fCheckMerkleRoot = True, cur_time=None):
     transaction.
 
     fCheckPoW        - Check proof-of-work.
+
     fCheckMerkleRoot - Check merkle root matches transactions.
+
     cur_time         - Current time. Defaults to time.time()
     """
 

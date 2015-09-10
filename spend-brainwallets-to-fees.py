@@ -71,9 +71,9 @@ parser.add_argument('-d', action='store', type=float,
                     default=10,
                     help='Delay between mempool scans')
 parser.add_argument('-f', action='store', type=str,
-                    dest='passphrase_file',
-                    default='common-passphrases',
-                    help='File of passphrases, one per line')
+                    dest='privkey_file',
+                    default='known-privkeys',
+                    help='File of known privkeys and passphrases, one per line')
 args = parser.parse_args()
 
 logging.root.setLevel('INFO')
@@ -85,7 +85,7 @@ if args.testnet:
 
 rpc = bitcoin.rpc.Proxy()
 
-with open(args.passphrase_file,'rb') as fd:
+with open(args.privkey_file,'rb') as fd:
     def add_privkey(known_privkey):
         h = Hash160(known_privkey.pub)
         scriptPubKey = CScript([OP_DUP, OP_HASH160, h, OP_EQUALVERIFY, OP_CHECKSIG])
@@ -94,14 +94,24 @@ with open(args.passphrase_file,'rb') as fd:
         logging.info('Known: %s %s' % (b2x(scriptPubKey), b2x(known_privkey.pub)))
 
     n = 0
-    for passphrase in fd.readlines():
+    for l in fd.readlines():
         n += 1
-        passphrase = passphrase.strip()
-        secret = hashlib.sha256(passphrase).digest()
+
+        l = l.strip()
+
+        try:
+            privkey = CBitcoinSecret(l.decode('utf8'))
+            add_privkey(privkey)
+        except bitcoin.base58.Base58ChecksumError:
+            pass
+        except bitcoin.base58.InvalidBase58Error:
+            pass
+
+        secret = hashlib.sha256(l).digest()
         add_privkey(CBitcoinSecret.from_secret_bytes(secret, False))
         add_privkey(CBitcoinSecret.from_secret_bytes(secret, True))
 
-    logging.info('Added %d known passphrases' % n)
+    logging.info('Added %d known privkeys/passphrases' % n)
 
 known_txids = set()
 

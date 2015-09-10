@@ -46,6 +46,9 @@ parser.add_argument('--op-return', action='store_true',
                     help="Add OP_RETURN <data> output to payment tx")
 parser.add_argument('--multisig', action='store_true',
                     help="Add multisig output to payment tx")
+parser.add_argument('--nsequence', action='store_true',
+                    default=[],
+                    help="Set nSequence=0 to enable Full-RBF")
 parser.add_argument('--bad-addr', action='append',
                     default=[],
                     help="Pay some dust to a 'bad' address to discourage propagation")
@@ -91,6 +94,9 @@ if args.multisig:
                      2, OP_CHECKMULTISIG]))
     tx.vout.append(multisig_txout)
 
+tx1_nSequence = 0 if args.nsequence else 0xFFFFFFFF
+tx2_nSequence = tx1_nSequence # maybe they should be different in the future?
+
 for bad_addr in args.bad_addr:
     bad_addr = CBitcoinAddress(bad_addr)
     txout = CMutableTxOut(args.dust, bad_addr.to_scriptPubKey())
@@ -124,7 +130,7 @@ while (value_in - value_out) / len(tx.serialize()) < feeperbyte1:
                 (b2lx(new_outpoint.hash), new_outpoint.n,
                  str_money_value(new_amount)))
 
-        new_txin = CMutableTxIn(new_outpoint)
+        new_txin = CMutableTxIn(new_outpoint, nSequence=tx1_nSequence)
         tx.vin.append(new_txin)
 
         value_in += new_amount
@@ -187,7 +193,7 @@ while (value_in - value_out) / len(tx.serialize()) < feeperbyte2:
                 (b2lx(new_outpoint.hash), new_outpoint.n,
                  str_money_value(new_amount)))
 
-        new_txin = CMutableTxIn(new_outpoint)
+        new_txin = CMutableTxIn(new_outpoint, nSequence=tx2_nSequence)
         tx.vin.append(new_txin)
 
         value_in += new_amount

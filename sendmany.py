@@ -36,6 +36,8 @@ parser.add_argument('-p', action='store', type=str,
 parser.add_argument('--relay-bw-feerate', action='store', type=float,
                     default=0.000011,
                     help='Relay bandwidth fee per KB')
+parser.add_argument('--no-reuse', action='store_true',
+                    help="Create a new tx; don't reuse an existing tx")
 parser.add_argument('address', action='store', type=str,
                     help='Destination address')
 parser.add_argument('amount', action='store', type=float,
@@ -50,6 +52,15 @@ if args.testnet:
 
 rpc = bitcoin.rpc.Proxy()
 
+
+def check_full_rbf_optin(tx):
+    """Return true if tx opts in to full-RBF"""
+    for vin in tx.vin:
+        if vin.nSequence < 0xFFFFFFFF-1:
+            return True
+    return False
+
+
 tx1 = None
 if args.prev_txid is not None:
     try:
@@ -61,6 +72,26 @@ if args.prev_txid is not None:
         parser.error('Invalid txid: Wrong length.')
 
     tx1 = rpc.getrawtransaction(args.prev_txid)
+
+elif not args.no_reuse:
+    # Try to find an unconfirmed transaction with full-RBF enabled
+    txids_seen = set()
+    for unspent in rpc.listunspent(0,0):
+        txid = unspent['outpoint'].hash
+        if txid not in txids_seen:
+            unspent_tx = rpc.getrawtransaction(txid)
+
+            if check_full_rbf_optin(unspent_tx):
+                tx1 = unspent_tx
+                logging.info('Found unconfirmed full-RBF tx1 %s' % b2lx(txid))
+                break
+
+            else:
+                txids_seen.add(txid)
+
+    else:
+        logging.info('No unconfirmed full-RBF tx1 found; creating new tx')
+
 
 tx2 = CMutableTransaction.from_tx(tx1) if tx1 is not None else CMutableTransaction()
 

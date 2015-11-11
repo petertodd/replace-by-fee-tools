@@ -35,3 +35,17 @@ can optionally specify that the first transaction additional OP-RETURN,
 multisig, and "blacklisted" address outputs. Some miners won't accept
 transactions with these output types; those miners will accept the second
 double-spend transaction, helping you achieve a succesful double-spend.
+
+
+Incremental Send Many
+=====================
+
+Basic usage:
+
+    ./sendmany.py <address> <amount>
+
+Finds an unconfirmed transaction in your wallet and rebroadcasts it with an
+additional output. The first transaction input is kept to ensure a
+double-spend; all other inputs are re-optimized for the new set of outputs.
+This can be significantly cheaper than respending unconfirmed outputs in long
+transaction chains.

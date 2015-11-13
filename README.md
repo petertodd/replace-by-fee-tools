@@ -49,3 +49,6 @@ additional output. The first transaction input is kept to ensure a
 double-spend; all other inputs are re-optimized for the new set of outputs.
 This can be significantly cheaper than respending unconfirmed outputs in long
 transaction chains.
+
+Depends on the availability of the fundrawtransactin RPC call, which is
+currently only available in git master. (will be in Bitcoin Core v0.12.0)

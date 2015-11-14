@@ -162,8 +162,8 @@ if tx1 is not None:
     tx1_size = len(tx1.serialize())
     tx1_value_in = 0
     for txin in tx1.vin:
-        r = rpc.gettxout(txin.prevout, includemempool=False)
-        tx1_value_in += r['txout'].nValue
+        prevout_tx = rpc.getrawtransaction(txin.prevout.hash)
+        tx1_value_in += prevout_tx.vout[txin.prevout.n].nValue
 
     tx1_fee = tx1_value_in - sum(txout.nValue for txout in tx1.vout)
 

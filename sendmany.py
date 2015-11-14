@@ -77,12 +77,17 @@ if args.prev_txid is not None:
     tx1 = rpc.getrawtransaction(args.prev_txid)
 
 elif not args.no_reuse:
-    # Try to find an unconfirmed transaction with full-RBF enabled
+    # Try to find an unconfirmed transaction with full-RBF enabled and a change
+    # output > amount
     txids_seen = set()
     for unspent in rpc.listunspent(0,0):
         txid = unspent['outpoint'].hash
         if txid not in txids_seen:
             unspent_tx = rpc.getrawtransaction(txid)
+
+            # FIXME: this still fails if amount doesn't leave enough for fees
+            if unspent_tx.vout[0].nValue < args.amount:
+                continue
 
             if check_full_rbf_optin(unspent_tx):
                 tx1 = unspent_tx

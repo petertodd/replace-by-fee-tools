@@ -50,6 +50,9 @@ if args.verbose:
 if args.testnet:
     bitcoin.SelectParams('testnet')
 
+args.amount = int(args.amount * COIN)
+args.address = CBitcoinAddress(args.address)
+
 rpc = bitcoin.rpc.Proxy()
 
 
@@ -123,8 +126,7 @@ if not args.first_seen_safe and len(tx2.vout) > 0:
 
 
 # Add the new output
-payment_address = CBitcoinAddress(args.address)
-payment_txout = CMutableTxOut(int(args.amount * COIN), payment_address.to_scriptPubKey())
+payment_txout = CMutableTxOut(args.amount, args.address.to_scriptPubKey())
 tx2.vout.append(payment_txout)
 
 r = rpc.fundrawtransaction(tx2)

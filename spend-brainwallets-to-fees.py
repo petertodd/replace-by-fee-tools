@@ -28,7 +28,7 @@ known_p2sh_scriptPubKeys = \
 def create_spend_to_fees_tx(outpoint, privkey):
     txin_scriptPubKey = CScript([OP_DUP, OP_HASH160, Hash160(privkey.pub), OP_EQUALVERIFY, OP_CHECKSIG])
 
-    txin = CMutableTxIn(outpoint)
+    txin = CMutableTxIn(outpoint, nSequence=0)
     txout = CMutableTxOut(0, CScript([OP_RETURN]))
     tx = CMutableTransaction([txin],[txout])
 
@@ -43,7 +43,7 @@ def create_spend_to_fees_tx(outpoint, privkey):
     return tx
 
 def create_p2sh_spend_to_fees_tx(outpoint, scriptSig, redeemScript):
-    return CTransaction([CTxIn(outpoint, scriptSig + redeemScript)],
+    return CTransaction([CTxIn(outpoint, scriptSig + redeemScript, nSequence=0)],
                         [CTxOut(0, CScript([OP_RETURN]))])
 
 def scan_tx_for_spendable_outputs(tx, txid):

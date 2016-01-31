@@ -46,9 +46,9 @@ parser.add_argument('--op-return', action='store_true',
                     help="Add OP_RETURN <data> output to payment tx")
 parser.add_argument('--multisig', action='store_true',
                     help="Add multisig output to payment tx")
-parser.add_argument('--nsequence', action='store_true',
-                    default=[],
-                    help="Set nSequence=0 to enable Full-RBF")
+parser.add_argument('--optinrbf', action='store_true',
+                    default=False,
+                    help="Signal full-RBF opt-in (BIP125)")
 parser.add_argument('--bad-addr', action='append',
                     default=[],
                     help="Pay some dust to a 'bad' address to discourage propagation")
@@ -94,7 +94,7 @@ if args.multisig:
                      2, OP_CHECKMULTISIG]))
     tx.vout.append(multisig_txout)
 
-tx1_nSequence = 0 if args.nsequence else 0xFFFFFFFF
+tx1_nSequence = 0xFFFFFFFF-2 if args.optinrbf else 0xFFFFFFFF
 tx2_nSequence = tx1_nSequence # maybe they should be different in the future?
 
 for bad_addr in args.bad_addr:

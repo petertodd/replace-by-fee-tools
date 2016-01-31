@@ -140,7 +140,7 @@ tx2_fee = r['fee']
 
 # Set nSequnce on all inputs appropriately to opt-in to full-RBF
 for txin in tx2.vin:
-    txin.nSequence = 0
+    txin.nSequence = 0xFFFFFFFF-2
 
 # Move change txout to 0th slot
 changepos = r['changepos']

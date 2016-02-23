@@ -83,7 +83,14 @@ elif not args.no_reuse:
     for unspent in rpc.listunspent(0,0):
         txid = unspent['outpoint'].hash
         if txid not in txids_seen:
-            unspent_tx = rpc.getrawtransaction(txid)
+            try:
+                unspent_tx = rpc.getrawtransaction(txid)
+            except IndexError:
+                # in v0.12.0 some of the unspent txs in listunspent may not
+                # correspond to txs in the mempool, so skip if
+                # getrawtransaction() errors out
+                txids_seen.add(txid)
+                continue
 
             # FIXME: this still fails if amount doesn't leave enough for fees
             if unspent_tx.vout[0].nValue < args.amount:

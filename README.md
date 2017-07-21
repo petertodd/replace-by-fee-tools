@@ -26,7 +26,7 @@ Double Spend
 
 Basic usage:
 
-    ./double-spend.py <address> <amount>
+    ./doublespend.py <address> <amount>
 
 Creates two transactions in succession. The first pays the specified amount to
 the specified address. The second double-spends that transaction with a

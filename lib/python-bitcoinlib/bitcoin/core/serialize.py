@@ -87,23 +87,23 @@ class Serializable(object):
 
     __slots__ = []
 
-    def stream_serialize(self, f):
+    def stream_serialize(self, f, **kwargs):
         """Serialize to a stream"""
         raise NotImplementedError
 
     @classmethod
-    def stream_deserialize(cls, f):
+    def stream_deserialize(cls, f, **kwargs):
         """Deserialize from a stream"""
         raise NotImplementedError
 
-    def serialize(self):
+    def serialize(self, params={}):
         """Serialize, returning bytes"""
         f = _BytesIO()
-        self.stream_serialize(f)
+        self.stream_serialize(f, **params)
         return f.getvalue()
 
     @classmethod
-    def deserialize(cls, buf, allow_padding=False):
+    def deserialize(cls, buf, allow_padding=False, params={}):
         """Deserialize bytes, returning an instance
 
         allow_padding - Allow buf to include extra padding. (default False)
@@ -112,7 +112,7 @@ class Serializable(object):
         deserialization DeserializationExtraDataError will be raised.
         """
         fd = _BytesIO(buf)
-        r = cls.stream_deserialize(fd)
+        r = cls.stream_deserialize(fd, **params)
         if not allow_padding:
             padding = fd.read()
             if len(padding) != 0:
@@ -172,6 +172,7 @@ class Serializer(object):
     @classmethod
     def stream_serialize(cls, obj, f):
         raise NotImplementedError
+
     @classmethod
     def stream_deserialize(cls, f):
         raise NotImplementedError
@@ -184,7 +185,9 @@ class Serializer(object):
 
     @classmethod
     def deserialize(cls, buf):
-        return cls.stream_deserialize(_BytesIO(buf))
+        if isinstance(buf, str) or isinstance(buf, bytes):
+            buf = _BytesIO(buf)
+        return cls.stream_deserialize(buf)
 
 
 class VarIntSerializer(Serializer):
@@ -233,18 +236,23 @@ class BytesSerializer(Serializer):
 
 class VectorSerializer(Serializer):
     """Base class for serializers of object vectors"""
-    @classmethod
-    def stream_serialize(cls, inner_cls, objs, f):
-        VarIntSerializer.stream_serialize(len(objs), f)
-        for obj in objs:
-            inner_cls.stream_serialize(obj, f)
+
+    # FIXME: stream_(de)serialize don't match the signatures of the base class
+    # due to the inner_cls parameter. This probably isn't optimal API design
+    # and should be rethought at some point.
 
     @classmethod
-    def stream_deserialize(cls, inner_cls, f):
+    def stream_serialize(cls, inner_cls, objs, f, inner_params={}):
+        VarIntSerializer.stream_serialize(len(objs), f)
+        for obj in objs:
+            inner_cls.stream_serialize(obj, f, **inner_params)
+
+    @classmethod
+    def stream_deserialize(cls, inner_cls, f, inner_params={}):
         n = VarIntSerializer.stream_deserialize(f)
         r = []
         for i in range(n):
-            r.append(inner_cls.stream_deserialize(f))
+            r.append(inner_cls.stream_deserialize(f, **inner_params))
         return r
 
 
@@ -266,7 +274,8 @@ class uint256VectorSerializer(Serializer):
         return r
 
 
-class intVectorSerialzer(Serializer):
+class intVectorSerializer(Serializer):
+
     @classmethod
     def stream_serialize(cls, ints, f):
         l = len(ints)
@@ -279,7 +288,8 @@ class intVectorSerialzer(Serializer):
         l = VarIntSerializer.stream_deserialize(f)
         ints = []
         for i in range(l):
-            ints.append(struct.unpack(b"<i", ser_read(f, 4)))
+            ints.append(struct.unpack(b"<i", ser_read(f, 4))[0])
+        return ints
 
 
 class VarStringSerializer(Serializer):
@@ -339,13 +349,12 @@ def compact_from_uint256(v):
 def uint256_to_str(u):
     r = b""
     for i in range(8):
-        r += struct.pack('<I', u >> (i * 32) & 0xffff)
+        r += struct.pack('<I', u >> (i * 32) & 0xffffffff)
     return r
 
 def uint256_to_shortstr(u):
     s = "%064x" % (u,)
     return s[:16]
-
 
 __all__ = (
         'MAX_SIZE',
@@ -362,10 +371,11 @@ __all__ = (
         'BytesSerializer',
         'VectorSerializer',
         'uint256VectorSerializer',
-        'intVectorSerialzer',
+        'intVectorSerializer',
         'VarStringSerializer',
         'uint256_from_str',
         'uint256_from_compact',
         'compact_from_uint256',
+        'uint256_to_str',
         'uint256_to_shortstr',
 )

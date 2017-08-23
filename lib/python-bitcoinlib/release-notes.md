@@ -1,6 +1,71 @@
 python-bitcoinlib release notes
 ===============================
 
+v0.7.0
+======
+
+Breaking API changes:
+
+* The 'cooked' CScript iterator now returns `OP_0` for the empty binary string
+  rather than `b''`
+
+* The alias `JSONRPCException = JSONRPCError` has been removed. This alias was
+  added for compatibility with v0.4.0 of python-bitcoinlib.
+
+* Where appropriate, `RPC_INVALID_ADDRESS_OR_KEY` errors are now caught
+  properly, which means that rather than raising `IndexError`, RPC commands
+  such as `getblock` may raise `JSONRPCError` instead. For instance during
+  initial startup previously python-bitcoinlib would incorrectly raise
+  `IndexError` rather than letting the callee know that RPC was unusable. Along
+  those lines, `JSONRPCError` subclasses have been added for some (but not
+  all!) of the types of RPC errors Bitcoin Core returns.
+
+Bugfixes:
+
+* Fixed a spurious `AttributeError` when `bitcoin.rpc.Proxy()` fails.
+
+
+v0.6.1
+======
+
+New features:
+
+* getblockheader RPC call now supports the verbose option; there's no other way
+  to get the block height, among other things, from the RPC interface.
+* subtoaddress and sendmany RPC calls now support comment and
+  subtractfeefromamount arguments.
+
+
+v0.6.0
+======
+
+Breaking API changes:
+
+* RPC over SSL support removed to match Bitcoin Core's removal of RPC SSL
+  support in v0.12.0 If you need this, use an alternative such as a stunnel or
+  a SSH tunnel.
+
+* Removed SCRIPT_VERIFY constants ``bitcoin.core.script``, leaving just the
+  constants in ``bitcoin.core.scripteval``; being singletons the redundant
+  constants were broken anyway.
+
+* SCRIPT_VERIFY_EVEN_S renamed to SCRIPT_VERIFY_LOW_S to match Bitcoin Core's naming
+
+* SCRIPT_VERIFY_NOCACHE removed as Bitcoin Core no longer has it (and we never
+  did anything with it anyway)
+
+
+v0.5.1
+======
+
+Various small bugfixes; see git history.
+
+New features:
+
+* New RPC calls: fundrawtransaction, generate, getblockheader
+* OP_CHECKLOCKTIMEVERIFY opcode constant
+
+
 v0.5.0
 ======
 
@@ -23,6 +88,7 @@ New features:
 Notable bugfixes:
 
 * getinfo() now works where disablewallet=1
+
 
 v0.4.0
 ======

@@ -21,7 +21,7 @@ if sys.version > '3':
 
 from binascii import unhexlify
 
-from bitcoin.core import ValidationError
+from bitcoin.core import *
 from bitcoin.core.script import *
 from bitcoin.core.scripteval import *
 
@@ -57,26 +57,59 @@ def parse_script(s):
 def load_test_vectors(name):
     with open(os.path.dirname(__file__) + '/data/' + name, 'r') as fd:
         for test_case in json.load(fd):
-            if len(test_case) < 3:
-                test_case.append('')
-            scriptSig, scriptPubKey, comment = test_case
+            if len(test_case) == 1:
+                continue # comment
+
+            if len(test_case) == 3:
+                test_case.append('') # add missing comment
+
+            scriptSig, scriptPubKey, flags, comment = test_case
 
             scriptSig = parse_script(scriptSig)
             scriptPubKey = parse_script(scriptPubKey)
 
-            yield (scriptSig, scriptPubKey, comment, test_case)
+            flag_set = set()
+            for flag in flags.split(','):
+                if flag == '' or flag == 'NONE':
+                    pass
+
+                else:
+                    try:
+                        flag = SCRIPT_VERIFY_FLAGS_BY_NAME[flag]
+                    except IndexError:
+                        raise Exception('Unknown script verify flag %r' % flag)
+
+                    flag_set.add(flag)
+
+            yield (scriptSig, scriptPubKey, flag_set, comment, test_case)
 
 
 class Test_EvalScript(unittest.TestCase):
-    flags = (SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_STRICTENC)
+    def create_test_txs(self, scriptSig, scriptPubKey):
+        txCredit = CTransaction([CTxIn(COutPoint(), CScript([OP_0, OP_0]), nSequence=0xFFFFFFFF)],
+                                [CTxOut(0, scriptPubKey)],
+                                nLockTime=0)
+        txSpend = CTransaction([CTxIn(COutPoint(txCredit.GetHash(), 0), scriptSig, nSequence=0xFFFFFFFF)],
+                               [CTxOut(0, CScript())],
+                               nLockTime=0)
+        return (txCredit, txSpend)
+
     def test_script_valid(self):
-        for scriptSig, scriptPubKey, comment, test_case in load_test_vectors('script_valid.json'):
+        for scriptSig, scriptPubKey, flags, comment, test_case in load_test_vectors('script_valid.json'):
+            (txCredit, txSpend) = self.create_test_txs(scriptSig, scriptPubKey)
+
             try:
-                VerifyScript(scriptSig, scriptPubKey, None, 0, flags=self.flags)
+                VerifyScript(scriptSig, scriptPubKey, txSpend, 0, flags)
             except ValidationError as err:
                 self.fail('Script FAILED: %r %r %r with exception %r' % (scriptSig, scriptPubKey, comment, err))
 
     def test_script_invalid(self):
-        for scriptSig, scriptPubKey, comment, test_case in load_test_vectors('script_invalid.json'):
-            with self.assertRaises(ValidationError):
-                VerifyScript(scriptSig, scriptPubKey, None, 0, flags=self.flags)
+        for scriptSig, scriptPubKey, flags, comment, test_case in load_test_vectors('script_invalid.json'):
+            (txCredit, txSpend) = self.create_test_txs(scriptSig, scriptPubKey)
+
+            try:
+                VerifyScript(scriptSig, scriptPubKey, txSpend, 0, flags)
+            except ValidationError:
+                continue
+
+            self.fail('Expected %r to fail' % test_case)

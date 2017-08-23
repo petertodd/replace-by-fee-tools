@@ -6,7 +6,7 @@ import os
 from bitcoin import __version__
 
 here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, 'README')) as f:
+with open(os.path.join(here, 'README.md')) as f:
     README = f.read()
 
 requires = []
@@ -17,6 +17,7 @@ setup(name='python-bitcoinlib',
       long_description=README,
       classifiers=[
           "Programming Language :: Python",
+          "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
       ],
       url='https://github.com/petertodd/python-bitcoinlib',
       keywords='bitcoin',

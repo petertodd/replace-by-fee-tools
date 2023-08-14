@@ -27,7 +27,7 @@ parser.add_argument('-n', action='store_true',
                     dest='dryrun',
                     help="Dry-run; don't actually send the transactions")
 parser.add_argument('-d', action='store', type=int,
-                    default=15,
+                    default=30,
                     dest='delay',
                     help="Delay in seconds between payment and double-spend")
 parser.add_argument('--dust', action='store', type=float,
@@ -138,12 +138,12 @@ while (value_in - value_out) / len(tx.serialize()) < feeperbyte1:
         value_out += new_amount
 
         # Resign the tx so we can figure out how large the new input's scriptSig will be.
-        r = rpc.signrawtransaction(tx)
+        r = rpc.signrawtransactionwithwallet(tx)
         assert(r['complete'])
 
         tx.vin[-1].scriptSig = r['tx'].vin[-1].scriptSig
 
-r = rpc.signrawtransaction(tx)
+r = rpc.signrawtransactionwithwallet(tx)
 assert(r['complete'])
 tx = CMutableTransaction.from_tx(r['tx'])
 
@@ -162,6 +162,8 @@ if not args.dryrun:
     logging.info('Sleeping for %d seconds' % args.delay)
     time.sleep(args.delay)
 
+# create a new proxy in case the old one timed out during sleep
+rpc = bitcoin.rpc.Proxy()
 
 # Double-spend! Remove all but the change output
 tx.vout = tx.vout[0:1]
@@ -201,12 +203,12 @@ while (value_in - value_out) / len(tx.serialize()) < feeperbyte2:
         value_out += new_amount
 
         # Resign the tx so we can figure out how large the new input's scriptSig will be.
-        r = rpc.signrawtransaction(tx)
+        r = rpc.signrawtransactionwithwallet(tx)
         assert(r['complete'])
 
         tx.vin[-1].scriptSig = r['tx'].vin[-1].scriptSig
 
-r = rpc.signrawtransaction(tx)
+r = rpc.signrawtransactionwithwallet(tx)
 assert(r['complete'])
 tx = r['tx']
 

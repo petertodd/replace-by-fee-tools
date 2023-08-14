@@ -8,19 +8,6 @@ available at https://github.com/petertodd/bitcoin/tree/replace-by-fee-v0.11.0
 Requirements: Python3 (python-bitcoinlib included in repo as subtree)
 
 
-Bump Fee
-========
-
-Basic usage:
-
-    ./bump-fee.py <txid>
-
-Increases the fee on a transaction by double-spending it with a second
-transaction paying the original recipients. The change output will have its
-value reduced to make the fee higher, and there may be additional inputs added
-if the original inputs weren't enough.
-
-
 Double Spend
 ============
 

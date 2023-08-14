@@ -1,11 +1,12 @@
 Replace-by-Fee Tools
 ====================
 
-Tools to test out replace-by-fee functionality. You'll need a local node with
-the replace-by-fee patch. A version applied to Bitcoin Core v0.11.0 is
-available at https://github.com/petertodd/bitcoin/tree/replace-by-fee-v0.11.0
+Tools to test out RBF functionality.
 
-Requirements: Python3 and python-bitcoinlib
+Requirements: Python3 and python-bitcoinlib v0.12
+
+To test out full-rbf functionality, the full-rbf-peering patch may be useful:
+https://github.com/petertodd/bitcoin/tree/full-rbf-v25.0
 
 
 Double Spend

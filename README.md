@@ -22,23 +22,3 @@ can optionally specify that the first transaction additional OP-RETURN,
 multisig, and "blacklisted" address outputs. Some miners won't accept
 transactions with these output types; those miners will accept the second
 double-spend transaction, helping you achieve a succesful double-spend.
-
-
-Incremental Send Many
-=====================
-
-Basic usage:
-
-    ./sendmany.py <address> <amount>
-
-Finds an unconfirmed transaction in your wallet that has opted into full-RBF
-and rebroadcasts it with an additional output. If no such transaction exists, a
-new opt-in full-RBF transaction is created. The first transaction input is kept
-to ensure a double-spend; all other inputs are re-optimized for the new set of
-outputs.  This can be significantly cheaper than respending unconfirmed outputs
-in long transaction chains.
-
-Depends on the availability of the fundrawtransaction RPC call, which is
-currently only available in git master. (will be in Bitcoin Core v0.12.0)
-
-Opt-In Full-RBF pull-req: https://github.com/bitcoin/bitcoin/pull/6871
